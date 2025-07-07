@@ -17,6 +17,72 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
     }
 
     /**
+     * AI-powered analysis of module assignments for ALL files.
+     * This creates the initial module structure using LLM analysis.
+     */
+    public function analyze_module_assignments(): array
+    {
+        $all_documented_files = $this->get_all_documented_files();
+
+        // Load existing do_not_document files
+        $existing_log = $this->load_log();
+        $do_not_document_files = $existing_log['do_not_document'] ?? [];
+
+        // Filter out files that are in do_not_document
+        $filtered_files = $all_documented_files->filter(function ($file) use ($do_not_document_files) {
+            return ! in_array($file, $do_not_document_files);
+        });
+
+        // Get all files with their documentation
+        $filesWithDocs = $this->getAllFilesWithDocs($filtered_files);
+
+        // Build prompt for initial module creation
+        $prompt = $this->buildInitialModuleCreationPrompt($filesWithDocs);
+
+        // Get AI recommendations for module structure
+        $aiResponse = $this->getAIModuleRecommendations($prompt);
+
+        // Process the AI response to create module structure
+        $moduleStructure = $this->processInitialModuleStructure($aiResponse);
+
+        // Save the log with the new structure
+        $log = [
+            'last_analysis' => \Carbon\Carbon::now()->toIso8601String(),
+            'assigned_files' => $moduleStructure['assigned_files'],
+            'unassigned_files' => $moduleStructure['unassigned_files'],
+            'do_not_document' => $do_not_document_files,
+            'potential_modules' => [], // No longer needed with AI approach
+            'module_suggestions' => [], // No longer needed with AI approach
+            'ai_created_modules' => $moduleStructure['created_modules'],
+        ];
+
+        $this->save_log($log);
+
+        // Actually create the module files that don't exist yet
+        if (! empty($moduleStructure['created_modules'])) {
+            $this->createModuleFiles($moduleStructure['created_modules']);
+        }
+
+        return $log;
+    }
+
+    /**
+     * Get all files with their short documentation.
+     */
+    protected function getAllFilesWithDocs(Collection $files): Collection
+    {
+        return $files->mapWithKeys(function ($file) {
+            return [
+                $file => [
+                    'path' => $file,
+                    'has_short_doc' => $this->parser->hasShortDocumentation($file),
+                    'short_doc' => $this->parser->getShortDocumentation($file),
+                ],
+            ];
+        });
+    }
+
+    /**
      * Get unassigned files with their short documentation.
      */
     public function getUnassignedFilesWithDocs(): Collection
@@ -580,5 +646,180 @@ EOT;
         $log['last_ai_assignment'] = now()->toIso8601String();
 
         $this->save_log($log);
+    }
+
+    /**
+     * Build prompt for initial module creation.
+     */
+    protected function buildInitialModuleCreationPrompt(Collection $filesWithDocs): string
+    {
+        $prompt = "# Initial Module Creation Task\n\n";
+        $prompt .= 'You are tasked with creating an initial module structure for a healthcare platform. ';
+        $prompt .= "Analyze ALL the following files and create a comprehensive module structure that organizes them logically.\n\n";
+        $prompt .= "IMPORTANT: Group files into coherent modules based on functionality. It's okay to leave files unassigned if they don't clearly belong to any module.\n\n";
+        $prompt .= '## FILES TO ORGANIZE ('.$filesWithDocs->count()." files)\n\n";
+
+        foreach ($filesWithDocs as $path => $fileData) {
+            $prompt .= "### File: {$path}\n";
+
+            // Extract directory and filename for clarity
+            $directory = dirname($path);
+            $filename = basename($path);
+            $prompt .= "**Directory:** {$directory}\n";
+            $prompt .= "**Filename:** {$filename}\n\n";
+
+            if ($fileData['short_doc']) {
+                $prompt .= "**Documentation:**\n{$fileData['short_doc']}";
+            } else {
+                $prompt .= '**Documentation:** *No short documentation available*';
+            }
+            $prompt .= "\n\n---\n\n";
+        }
+
+        $prompt .= $this->getInitialModuleCreationInstructions();
+
+        return $prompt;
+    }
+
+    /**
+     * Get instructions for initial module creation.
+     */
+    protected function getInitialModuleCreationInstructions(): string
+    {
+        return <<<'EOT'
+## INSTRUCTIONS
+
+Create a comprehensive module structure that organizes files into logical modules based on functionality. Follow these guidelines:
+
+1. **Analyze file paths and documentation** to understand the purpose of each file
+2. **Group files by functionality** - files that work together should be in the same module
+3. **Consider directory structure** as a strong hint for module organization
+4. **Create modules that make semantic sense** for the application domain
+5. **Leave files unassigned** if they don't clearly fit into any logical module
+
+Return your response as a JSON object with the following structure:
+
+{
+    "modules": [
+        {
+            "module_name": "User Authentication",
+            "module_slug": "authentication",
+            "description": "Handles user authentication, login, registration, and password management. Includes authentication middleware, controllers, and related Livewire components.",
+            "files": [
+                "app/Http/Controllers/Auth/LoginController.php",
+                "app/Http/Controllers/Auth/RegisterController.php",
+                "app/Http/Middleware/Authenticate.php",
+                "app/Livewire/Auth/Login.php",
+                "app/Livewire/Auth/Register.php"
+            ]
+        },
+        {
+            "module_name": "Data Requests",
+            "module_slug": "data-requests",
+            "description": "Manages data request functionality including creation, editing, viewing, and processing. Includes models, controllers, Livewire components, and related jobs.",
+            "files": [
+                "app/Models/DataRequest.php",
+                "app/Livewire/DataRequests/Create.php",
+                "app/Livewire/DataRequests/Edit.php",
+                "app/Livewire/DataRequests/Index.php",
+                "app/Livewire/DataRequests/Show.php",
+                "app/Jobs/CreateDataRequestZipJob.php"
+            ]
+        }
+    ],
+    "unassigned_files": [
+        "app/Helpers/ViteHelper.php",
+        "resources/js/bootstrap.js"
+    ]
+}
+
+Guidelines:
+- **Group files that clearly work together** into modules
+- **Leave files unassigned** if they are:
+  - Utility files that don't belong to a specific feature
+  - Configuration or bootstrap files
+  - Standalone helpers without clear module affinity
+- Module names should be clear and descriptive
+- Module slugs should be lowercase with hyphens (e.g., "user-management")
+- Descriptions should be comprehensive (2-3 sentences minimum)
+- Group related components together (models, controllers, Livewire components, etc.)
+- Consider both file paths AND functionality when grouping
+- Create modules that represent coherent features or subsystems
+- Each module should have at least 3 files (don't force small groups)
+
+IMPORTANT: Return ONLY valid JSON. Do not include markdown code blocks or any other text.
+
+EOT;
+    }
+
+    /**
+     * Get AI module recommendations.
+     */
+    protected function getAIModuleRecommendations(string $prompt): array
+    {
+        $aiService = app(\Shawnveltman\LaravelOpenai\OpenAiService::class);
+        $model = config('cascadedocs.ai.default_model', 'gpt-4o');
+
+        try {
+            $response = $aiService->generate_response_from_prompt(
+                prompt: $prompt,
+                model: $model,
+                max_tokens: 8000,
+                temperature: 0.3,
+                json_mode: true
+            );
+
+            return json_decode($response, true);
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to get AI module recommendations: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Process initial module structure from AI response.
+     */
+    protected function processInitialModuleStructure(array $aiResponse): array
+    {
+        $assignedFiles = [];
+        $createdModules = [];
+
+        foreach ($aiResponse['modules'] ?? [] as $module) {
+            $slug = $module['module_slug'];
+
+            // Track assigned files
+            $assignedFiles[$slug] = $module['files'];
+
+            // Track modules to create
+            $createdModules[] = [
+                'slug' => $slug,
+                'name' => $module['module_name'],
+                'description' => $module['description'],
+                'files' => $module['files'],
+            ];
+        }
+
+        // Use the unassigned files from the AI response
+        $unassignedFiles = $aiResponse['unassigned_files'] ?? [];
+
+        return [
+            'assigned_files' => $assignedFiles,
+            'unassigned_files' => $unassignedFiles,
+            'created_modules' => $createdModules,
+        ];
+    }
+
+    /**
+     * Create module files for newly created modules.
+     */
+    protected function createModuleFiles(array $modules): void
+    {
+        $metadataService = new ModuleMetadataService;
+        $fileUpdater = new ModuleFileUpdater;
+
+        foreach ($modules as $module) {
+            if (! $metadataService->moduleExists($module['slug'])) {
+                $fileUpdater->createModule($module);
+            }
+        }
     }
 }

@@ -3,7 +3,7 @@
 namespace Lumiio\CascadeDocs\Commands\Documentation;
 
 use Illuminate\Console\Command;
-use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentService;
+use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentAIService;
 
 class AnalyzeModuleAssignmentsCommand extends Command
 {
@@ -12,16 +12,22 @@ class AnalyzeModuleAssignmentsCommand extends Command
         {--suggest : Show module suggestions}
         {--update : Update the analysis log}';
 
-    protected $description = 'Analyze module assignments and identify files needing modules';
+    protected $description = 'Analyze module assignments using AI to create logical module groupings';
 
     public function handle(): int
     {
-        $service = new ModuleAssignmentService;
+        $service = new ModuleAssignmentAIService;
 
         if ($this->option('update')) {
-            $this->info('Analyzing module assignments...');
+            $this->info('Analyzing module assignments using AI...');
+            $this->warn('This may take a few minutes as the AI analyzes your codebase...');
+
             $analysis = $service->analyze_module_assignments();
             $this->info('Analysis complete and saved to module-assignment-log.json');
+
+            if (isset($analysis['ai_created_modules'])) {
+                $this->info('Created '.count($analysis['ai_created_modules']).' modules using AI analysis.');
+            }
         } else {
             $analysis = $service->load_log();
 
@@ -143,9 +149,9 @@ class AnalyzeModuleAssignmentsCommand extends Command
         }
 
         $this->newLine();
-        $this->info('To create a new module:');
-        $this->line('1. Create a new file in docs/source_documents/modules/[module-name].md');
-        $this->line('2. Add the module metadata and file listings');
-        $this->line('3. Run php artisan update:documentation to update module documentation');
+        $this->info('To assign additional files to modules:');
+        $this->line('1. Run php artisan documentation:assign-files-to-modules');
+        $this->line('2. Or manually edit the module metadata files');
+        $this->line('3. Run php artisan documentation:update-all-modules to regenerate documentation');
     }
 }

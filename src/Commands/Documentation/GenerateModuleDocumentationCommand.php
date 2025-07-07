@@ -17,9 +17,9 @@ class GenerateModuleDocumentationCommand extends Command
 
         $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
 
-        // Step 1: Analyze module assignments
-        $this->info('Step 1: Analyzing module assignments...');
-        $this->call('documentation:analyze-modules', ['--suggest' => true]);
+        // Step 1: Analyze module assignments using AI
+        $this->info('Step 1: Analyzing module assignments using AI...');
+        $this->call('documentation:analyze-modules', ['--update' => true]);
 
         // Step 2: Assign files to modules
         $this->info("\nStep 2: Assigning files to modules...");
