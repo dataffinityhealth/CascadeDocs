@@ -332,6 +332,11 @@ class ModuleAssignmentService
 
     protected function save_log(array $log): void
     {
+        $directory = dirname($this->log_path);
+        if (!File::exists($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+        
         File::put($this->log_path, json_encode($log, JSON_PRETTY_PRINT));
     }
 
