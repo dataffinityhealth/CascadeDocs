@@ -75,7 +75,6 @@ class ModuleMetadataService
                 $metadata['files'][] = [
                     'path' => $file,
                     'documented' => true,
-                    'documentation_tier' => $this->getDocumentationTier($file),
                     'added_date' => Carbon::now()->toIso8601String(),
                 ];
             } else {
@@ -143,7 +142,6 @@ class ModuleMetadataService
                 $metadata['files'][] = [
                     'path' => $file,
                     'documented' => true,
-                    'documentation_tier' => $this->getDocumentationTier($file),
                     'added_date' => Carbon::now()->toIso8601String(),
                 ];
             }
@@ -291,27 +289,6 @@ class ModuleMetadataService
         ];
     }
 
-    /**
-     * Get documentation tier for a file.
-     */
-    protected function getDocumentationTier(string $file): string
-    {
-        $tiers = config('cascadedocs.tier_directories', ['full', 'medium', 'short']);
-
-        // Remove extension and add .md
-        $docFile = preg_replace('/\.(php|js|blade\.php)$/', '', $file).'.md';
-
-        foreach ($tiers as $tier) {
-            $outputPath = config('cascadedocs.paths.output');
-            $docPath = base_path("{$outputPath}{$tier}/{$docFile}");
-
-            if (File::exists($docPath)) {
-                return $tier;
-            }
-        }
-
-        return 'unknown';
-    }
 
     /**
      * Get current git commit SHA.

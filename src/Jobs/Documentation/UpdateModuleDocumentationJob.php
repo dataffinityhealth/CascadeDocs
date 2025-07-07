@@ -172,7 +172,6 @@ class UpdateModuleDocumentationJob implements ShouldQueue
                     $metadata['files'][] = [
                         'path' => $file,
                         'documented' => true,
-                        'documentation_tier' => $this->getDocumentationTier($file),
                         'added_date' => Carbon::now()->toIso8601String(),
                     ];
                 }
@@ -356,24 +355,6 @@ class UpdateModuleDocumentationJob implements ShouldQueue
         return null;
     }
 
-    protected function getDocumentationTier(string $file): string
-    {
-        $tiers = config('cascadedocs.tier_directories', ['full', 'medium', 'short']);
-
-        // Remove extension and add .md
-        $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file).'.md';
-        $outputPath = config('cascadedocs.paths.output');
-
-        foreach ($tiers as $tier) {
-            $doc_path = base_path("{$outputPath}{$tier}/{$doc_file}");
-
-            if (File::exists($doc_path)) {
-                return $tier;
-            }
-        }
-
-        return 'unknown';
-    }
 
     protected function get_module_update_prompt(
         string $module_slug,
@@ -406,21 +387,27 @@ Update the module documentation to incorporate these new files. Your response sh
 
 ## Critical Requirements:
 
-1. **NO PLACEHOLDERS**: Do not use placeholder text like "[insert details here]", "[to be documented]", "[describe...]", or any similar brackets. Write complete, informative content.
+1. **HIGH-LEVEL DOCUMENTATION**: This is module-level documentation that explains how the module works as a cohesive system. DO NOT simply list or summarize individual files. Instead, explain:
+   - The module's overall architecture and design
+   - How components work together to achieve the module's purpose
+   - Key workflows and interactions between files
+   - The module's role in the larger application
 
-2. **CONCRETE DETAILS**: Provide specific, factual information based on the code you've been shown. If you see a class, describe what it does. If you see methods, explain their purpose.
+2. **NO PLACEHOLDERS**: Do not use placeholder text like "[insert details here]", "[to be documented]", "[describe...]", or any similar brackets. Write complete, informative content.
 
-3. **MAINTAIN STRUCTURE**: Keep the same section structure as the existing documentation but expand and update content as needed.
+3. **CONCRETE DETAILS**: Provide specific, factual information based on the code you've been shown. If you see a class, describe what it does. If you see methods, explain their purpose.
 
-4. **INTEGRATION**: Seamlessly integrate information about new files into existing sections. Don't just append - weave the new content throughout.
+4. **MAINTAIN STRUCTURE**: Keep the same section structure as the existing documentation but expand and update content as needed.
 
-5. **OVERVIEW SECTION**: The overview must be 150-200 words and clearly explain:
-   - What the module does
-   - Its primary purpose in the system
-   - Key capabilities and features
-   - Main components it provides
+5. **INTEGRATION**: Seamlessly integrate information about new files into existing sections. Don't just append - weave the new content throughout.
 
-6. **COMPLETE CONTENT**: Return the ENTIRE module documentation, not just changes. Include all sections with full content.
+6. **OVERVIEW SECTION**: The overview must be 150-200 words and clearly explain:
+   - What the module does at a high level
+   - Its primary purpose and responsibility in the system
+   - Key capabilities and features it provides
+   - How it fits into the application architecture
+
+7. **COMPLETE CONTENT**: Return the ENTIRE module documentation, not just changes. Include all sections with full content.
 
 ## Expected Output Format:
 
@@ -429,13 +416,20 @@ Your response should be a complete markdown document starting with:
 
 Followed by all necessary sections with detailed, specific content based on the actual code and functionality shown in the file documentation.
 
-Remember: Write as if you're explaining to a new developer who needs to understand this module. Be specific, be complete, no placeholders.
-- Complete "How This Module Works" section with integrated file descriptions
-- Complete workflows section (updated if needed)
-- All other sections in their entirety
-- Related documentation section
+Remember: 
+- Write as if you're explaining to a new developer who needs to understand how this MODULE works as a system
+- Focus on the interactions, workflows, and overall architecture
+- Do NOT just summarize what each file does - explain how they work TOGETHER
+- Be specific, be complete, no placeholders
 
-DO NOT return placeholders, summaries, or partial content. Return the FULL documentation with the new files properly integrated.
+Key sections to include:
+- **Overview**: High-level purpose and role in the application
+- **How This Module Works**: Architecture, design patterns, and component interactions
+- **Key Workflows**: Step-by-step explanations of major processes
+- **Integration Points**: How this module interfaces with other parts of the system
+- All other sections in their entirety
+
+DO NOT return placeholders, summaries of individual files, or partial content. Return the FULL module documentation that explains how the MODULE functions as a cohesive system.
 EOT;
     }
 }

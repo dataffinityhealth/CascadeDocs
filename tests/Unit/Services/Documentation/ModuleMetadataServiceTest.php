@@ -107,7 +107,6 @@ it('adds documented files to module', function () {
     $newFile = collect($updated['files'])->firstWhere('path', 'app/Services/NewService.php');
     expect($newFile)->not->toBeNull();
     expect($newFile['documented'])->toBeTrue();
-    expect($newFile['documentation_tier'])->toBe('full');
     expect($newFile)->toHaveKey('added_date');
 
     // Cleanup
@@ -349,49 +348,6 @@ it('checks if module exists', function () {
     @unlink(base_path('docs/source_documents/modules/metadata/existing-module.json'));
 });
 
-it('determines documentation tier correctly', function () {
-    // Create documentation files in different tiers
-    $tiers = [
-        'full' => base_path('docs/source_documents/full/app/Services/FullService.md'),
-        'medium' => base_path('docs/source_documents/medium/app/Services/MediumService.md'),
-        'short' => base_path('docs/source_documents/short/app/Services/ShortService.md'),
-    ];
-
-    foreach ($tiers as $tier => $path) {
-        @mkdir(dirname($path), 0755, true);
-        file_put_contents($path, '# Documentation');
-    }
-
-    // Setup module
-    $this->service->saveMetadata('test-module', [
-        'module_slug' => 'test-module',
-        'files' => [],
-        'undocumented_files' => [],
-    ]);
-
-    // When adding files
-    $this->service->addFiles('test-module', [
-        'app/Services/FullService.php',
-        'app/Services/MediumService.php',
-        'app/Services/ShortService.php',
-        'app/Services/UnknownService.php',
-    ], true);
-
-    // Then
-    $metadata = $this->service->loadMetadata('test-module');
-    $files = collect($metadata['files']);
-
-    expect($files->firstWhere('path', 'app/Services/FullService.php')['documentation_tier'])->toBe('full');
-    expect($files->firstWhere('path', 'app/Services/MediumService.php')['documentation_tier'])->toBe('medium');
-    expect($files->firstWhere('path', 'app/Services/ShortService.php')['documentation_tier'])->toBe('short');
-    expect($files->firstWhere('path', 'app/Services/UnknownService.php')['documentation_tier'])->toBe('unknown');
-
-    // Cleanup
-    foreach ($tiers as $path) {
-        @unlink($path);
-    }
-    @unlink(base_path('docs/source_documents/modules/metadata/test-module.json'));
-});
 
 it('skips duplicate files when adding', function () {
     // Setup
