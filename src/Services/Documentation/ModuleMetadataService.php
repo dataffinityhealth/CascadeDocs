@@ -310,14 +310,15 @@ class ModuleMetadataService
      */
     protected function getDocumentationTier(string $file): string
     {
-        $tiers = ['full', 'medium', 'short'];
+        $tiers = config('cascadedocs.tier_directories', ['full', 'medium', 'short']);
 
         // Remove extension and add .md
         $docFile = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
 
         foreach ($tiers as $tier)
         {
-            $docPath = base_path("docs/source_documents/{$tier}/{$docFile}");
+            $outputPath = config('cascadedocs.paths.output');
+            $docPath = base_path("{$outputPath}{$tier}/{$docFile}");
 
             if (File::exists($docPath))
             {

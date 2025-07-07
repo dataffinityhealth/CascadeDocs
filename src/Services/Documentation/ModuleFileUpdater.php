@@ -13,7 +13,7 @@ class ModuleFileUpdater
     public function __construct()
     {
         $this->metadataService = new ModuleMetadataService();
-        $this->contentPath     = base_path('docs/source_documents/modules/content');
+        $this->contentPath     = base_path(config('cascadedocs.paths.modules.content'));
     }
 
     /**

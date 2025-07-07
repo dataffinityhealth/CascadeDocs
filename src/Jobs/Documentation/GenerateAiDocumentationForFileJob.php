@@ -74,6 +74,9 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
             {
                 throw new Exception('Invalid JSON response from LLM');
             }
+            
+            // Validate response for truncation
+            $this->validateResponseForTruncation($documentation);
         } catch (ClaudeRateLimitException $e)
         {
             // Let the job retry automatically
@@ -105,7 +108,8 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         $file_extension = pathinfo($source_file_path, PATHINFO_EXTENSION);
         $relative_path  = Str::beforeLast($relative_path, '.' . $file_extension);
 
-        return base_path("docs/source_documents/{$tier_map[$tier]}/{$relative_path}.md");
+        $outputPath = config('cascadedocs.paths.output');
+        return base_path("{$outputPath}{$tier_map[$tier]}/{$relative_path}.md");
     }
 
     private function write_documentation_file(string $doc_path, string $content): void
@@ -118,6 +122,52 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         }
 
         File::put($doc_path, $content);
+    }
+
+    private function validateResponseForTruncation(array $documentation): void
+    {
+        $truncationPatterns = [
+            '/\.\.\.$/',
+            '/\[truncated\]/',
+            '/\[.*to be added.*\]/i',
+            '/\[.*details here.*\]/i',
+            '/\[.*insert.*\]/i',
+            '/\[.*placeholder.*\]/i',
+        ];
+        
+        $minLengths = [
+            'micro' => 50,
+            'standard' => 200,
+            'expansive' => 500
+        ];
+        
+        foreach ($documentation as $tier => $content) {
+            if (!in_array($tier, config('cascadedocs.tier_names'))) {
+                continue;
+            }
+            
+            // Check for truncation patterns
+            foreach ($truncationPatterns as $pattern) {
+                if (preg_match($pattern, $content)) {
+                    throw new Exception("Documentation appears to contain placeholders or be truncated for tier: {$tier}");
+                }
+            }
+            
+            // Check minimum content length
+            if (strlen($content) < ($minLengths[$tier] ?? 50)) {
+                throw new Exception("Documentation appears too short for tier: {$tier} (length: " . strlen($content) . ")");
+            }
+            
+            // Check if content ends abruptly
+            $trimmedContent = trim($content);
+            if (preg_match('/[a-zA-Z0-9]$/', $trimmedContent)) {
+                // Content ends with alphanumeric character without punctuation - might be truncated
+                $lastLine = substr($trimmedContent, -100);
+                if (!preg_match('/[.!?]/', $lastLine)) {
+                    throw new Exception("Documentation may be truncated - no sentence ending found in tier: {$tier}");
+                }
+            }
+        }
     }
 
     private function get_unified_prompt(string $file_contents, string $file_extension, string $class_name, string $source_path, string $commit_sha): string
@@ -250,6 +300,14 @@ references:
 - **[Component B]** – [why it's relevant]
 
 Remember: Return ONLY the JSON object with all three tiers.
+
+# CRITICAL REQUIREMENTS:
+- You MUST provide COMPLETE documentation for all three tiers
+- DO NOT truncate, summarize, or use ellipsis (...) in any tier
+- DO NOT use placeholders like [details here], [to be added], or [insert X]
+- Each tier must be fully written according to its requirements
+- If content seems long, that's expected - provide the full documentation
+- Return a complete, valid JSON object with all content
 EOT;
     }
 }

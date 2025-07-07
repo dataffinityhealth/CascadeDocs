@@ -48,7 +48,8 @@ class UpdateModuleDocumentationJob implements ShouldQueue
         $original_metadata = $metadata; // Keep original in case we need to revert
 
         // Load current module content or create placeholder
-        $content_file_path = base_path("docs/source_documents/modules/content/{$this->module_slug}.md");
+        $modulesContentPath = config('cascadedocs.paths.modules.content');
+        $content_file_path = base_path("{$modulesContentPath}{$this->module_slug}.md");
         $original_content  = null; // Store original content for rollback
 
         if (! File::exists($content_file_path))
@@ -219,15 +220,19 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     protected function get_full_documentation_path(string $file): string
     {
         $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
+        $outputPath = config('cascadedocs.paths.output');
+        $tierDir = config('cascadedocs.tiers.expansive', 'full');
 
-        return base_path("docs/source_documents/full/{$doc_file}");
+        return base_path("{$outputPath}{$tierDir}/{$doc_file}");
     }
 
     protected function get_medium_documentation_path(string $file): string
     {
         $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
+        $outputPath = config('cascadedocs.paths.output');
+        $tierDir = config('cascadedocs.tiers.standard', 'medium');
 
-        return base_path("docs/source_documents/medium/{$doc_file}");
+        return base_path("{$outputPath}{$tierDir}/{$doc_file}");
     }
 
     protected function update_module_in_log(string $module_slug): void
@@ -298,14 +303,15 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
     protected function getDocumentationTier(string $file): string
     {
-        $tiers = ['full', 'medium', 'short'];
+        $tiers = config('cascadedocs.tier_directories', ['full', 'medium', 'short']);
 
         // Remove extension and add .md
         $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
+        $outputPath = config('cascadedocs.paths.output');
 
         foreach ($tiers as $tier)
         {
-            $doc_path = base_path("docs/source_documents/{$tier}/{$doc_file}");
+            $doc_path = base_path("{$outputPath}{$tier}/{$doc_file}");
 
             if (File::exists($doc_path))
             {

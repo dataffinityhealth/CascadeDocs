@@ -72,7 +72,6 @@ return [
         'default_model' => env('CASCADEDOCS_AI_MODEL', 'o3'),
         'filament_model' => env('CASCADEDOCS_FILAMENT_MODEL', 'claude-3-5-haiku-20241022'),
         'temperature' => env('CASCADEDOCS_AI_TEMPERATURE', 0.3),
-        'max_tokens' => env('CASCADEDOCS_AI_MAX_TOKENS', 25000),
     ],
 
     /*

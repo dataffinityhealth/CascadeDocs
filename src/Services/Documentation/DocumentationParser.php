@@ -69,7 +69,7 @@ class DocumentationParser
      */
     public function extractAllModuleSummaries(): Collection
     {
-        $contentPath = base_path('docs/source_documents/modules/content');
+        $contentPath = base_path(config('cascadedocs.paths.modules.content'));
 
         if (! File::exists($contentPath))
         {
@@ -141,7 +141,9 @@ class DocumentationParser
         // Replace file extensions with .md
         $docPath = preg_replace('/\.(php|js|vue|jsx|ts|tsx)$/', '.md', $relativePath);
 
-        return base_path("docs/source_documents/short/{$docPath}");
+        $outputPath = config('cascadedocs.paths.output');
+        $tierDir = config('cascadedocs.tiers.micro', 'short');
+        return base_path("{$outputPath}{$tierDir}/{$docPath}");
     }
 
     /**
