@@ -38,9 +38,15 @@ class AssignFilesToModulesCommand extends Command
     {
         $this->info('Starting file-to-module assignment process...');
 
-        // Step 1: Analyze current state
-        $this->info('Analyzing current module assignments...');
-        $analysis = $this->aiService->analyze_module_assignments();
+        // Step 1: Load current state (don't re-analyze if already done)
+        $this->info('Loading current module assignments...');
+        $analysis = $this->aiService->load_log();
+        
+        // If no analysis exists, run it
+        if (empty($analysis['last_analysis'])) {
+            $this->info('No existing analysis found. Running initial analysis...');
+            $analysis = $this->aiService->analyze_module_assignments();
+        }
 
         $unassignedCount = count($analysis['unassigned_files']);
 
@@ -273,7 +279,8 @@ class AssignFilesToModulesCommand extends Command
         $this->info('Syncing module assignments...');
         $this->call('documentation:sync-module-assignments', ['--quiet' => true]);
 
-        // Update the analysis
+        // Update the analysis to reflect the changes we just made
+        // This is necessary because we've modified the module structure
         $this->info('Updating module assignment analysis...');
         $this->aiService->analyze_module_assignments();
 
