@@ -45,13 +45,18 @@ php artisan cascadedocs:generate-module-docs  # Full module documentation flow
 ### Module Documentation Flow
 
 The `cascadedocs:generate-module-docs` command orchestrates the entire module documentation process:
-1. Analyzes module assignments using AI (creates initial module structure)
+1. Analyzes module assignments using AI (creates initial module structure) - **SKIPPED if module-assignment-log.json already exists**
 2. Assigns unassigned files to modules (uses existing analysis, doesn't duplicate)
 3. Syncs module assignments
-4. Updates all module documentation
+4. Updates all module documentation (with --force to skip confirmation)
 5. Shows final module status
 
-**Note**: The flow is optimized to avoid duplicate AI analysis calls. The initial analysis in step 1 is reused in step 2.
+**Important Notes**:
+- The flow is optimized to avoid duplicate AI analysis calls
+- Step 1 is automatically skipped if `module-assignment-log.json` exists, even if there are unassigned files
+- Use `--fresh` option to force a new analysis: `php artisan cascadedocs:generate-module-docs --fresh`
+- This allows you to run the documentation generation multiple times without re-analyzing the entire codebase
+- For updating module assignments after code changes, use the update commands instead
 
 ## Architecture
 

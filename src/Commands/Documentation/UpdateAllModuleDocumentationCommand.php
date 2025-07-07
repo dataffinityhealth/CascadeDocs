@@ -12,7 +12,8 @@ class UpdateAllModuleDocumentationCommand extends Command
                             {--module= : Update a specific module}
                             {--model= : The AI model to use for generation}
                             {--dry-run : Show what would be updated without making changes}
-                            {--limit=0 : Maximum number of modules to process (0 = all)}';
+                            {--limit=0 : Maximum number of modules to process (0 = all)}
+                            {--force : Skip confirmation prompt}';
 
     protected $description = 'Update documentation for all modules that have undocumented files';
 
@@ -96,7 +97,7 @@ class UpdateAllModuleDocumentationCommand extends Command
             return 0;
         }
 
-        if (! $this->confirm('Do you want to update documentation for these modules?')) {
+        if (!$this->option('force') && !$this->confirm('Do you want to update documentation for these modules?')) {
             $this->info('Update cancelled.');
 
             return 0;
