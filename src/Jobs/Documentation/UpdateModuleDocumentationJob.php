@@ -355,7 +355,6 @@ class UpdateModuleDocumentationJob implements ShouldQueue
         return null;
     }
 
-
     protected function get_module_update_prompt(
         string $module_slug,
         string $module_name,

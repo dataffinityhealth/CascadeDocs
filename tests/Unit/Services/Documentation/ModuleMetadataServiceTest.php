@@ -348,7 +348,6 @@ it('checks if module exists', function () {
     @unlink(base_path('docs/source_documents/modules/metadata/existing-module.json'));
 });
 
-
 it('skips duplicate files when adding', function () {
     // Setup
     $metadata = [

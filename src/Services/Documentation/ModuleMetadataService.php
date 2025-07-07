@@ -289,7 +289,6 @@ class ModuleMetadataService
         ];
     }
 
-
     /**
      * Get current git commit SHA.
      */
