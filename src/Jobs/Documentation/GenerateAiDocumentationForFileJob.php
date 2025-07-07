@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
@@ -38,6 +39,13 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
 
     public function handle(): void
     {
+        // Log the start of documentation generation
+        Log::info('CascadeDocs: Starting documentation generation', [
+            'file' => $this->file_path,
+            'tier' => $this->tier,
+            'model' => $this->model,
+        ]);
+
         // Check if documentation already exists for the requested tiers
         $tiers_to_check = $this->tier === 'all' ? config('cascadedocs.tier_names') : [$this->tier];
         $existing_tiers = [];
@@ -52,6 +60,10 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
 
         // Skip if all requested tiers already exist
         if (count($existing_tiers) === count($tiers_to_check)) {
+            Log::info('CascadeDocs: Skipping - documentation already exists', [
+                'file' => $this->file_path,
+                'existing_tiers' => $existing_tiers,
+            ]);
             return;
         }
 
@@ -65,6 +77,11 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         $prompt = $this->get_unified_prompt($file_contents, $file_extension, $class_name, $relative_path, $commit_sha);
 
         try {
+            Log::info('CascadeDocs: Sending request to AI provider', [
+                'file' => $this->file_path,
+                'prompt_length' => strlen($prompt),
+            ]);
+
             $response = $this->get_response_from_provider($prompt, $this->model, json_mode: true);
             $documentation = json_decode($response, true);
 
@@ -72,7 +89,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                 throw new Exception('Invalid JSON response from LLM');
             }
 
-            // Validate response for truncation
+            // Validate response for truncation - now just logs warnings
             $this->validateResponseForTruncation($documentation);
         } catch (ClaudeRateLimitException $e) {
             // Let the job retry automatically
@@ -94,6 +111,13 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                     $written_files[] = $doc_path;
                 }
             }
+            
+            // Log successful completion
+            Log::info('CascadeDocs: Documentation generation completed successfully', [
+                'file' => $this->file_path,
+                'tiers_saved' => $tiers_to_save,
+                'files_written' => count($written_files),
+            ]);
         } catch (Exception $e) {
             // Rollback any files that were written
             foreach ($written_files as $file_path) {
@@ -101,6 +125,13 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                     File::delete($file_path);
                 }
             }
+            
+            Log::error('CascadeDocs: Failed to write documentation files', [
+                'file' => $this->file_path,
+                'error' => $e->getMessage(),
+                'files_rolled_back' => count($written_files),
+            ]);
+            
             throw $e;
         }
     }
@@ -147,6 +178,8 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
             'expansive' => 300, // Reduced from 500
         ];
 
+        $warnings = [];
+
         foreach ($documentation as $tier => $content) {
             if (! in_array($tier, config('cascadedocs.tier_names'))) {
                 continue;
@@ -154,25 +187,69 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
 
             // Check for truncation patterns
             foreach ($truncationPatterns as $pattern) {
-                if (preg_match($pattern, $content)) {
-                    throw new Exception("Documentation appears to contain placeholders or be truncated for tier: {$tier}");
+                if (preg_match($pattern, $content, $matches)) {
+                    $warnings[] = "Tier {$tier} contains potential placeholder: {$matches[0]}";
+                    Log::warning('CascadeDocs: Potential placeholder detected', [
+                        'file' => $this->file_path,
+                        'tier' => $tier,
+                        'pattern' => $pattern,
+                        'match' => $matches[0],
+                        'content_preview' => substr($content, max(0, strpos($content, $matches[0]) - 50), 200),
+                    ]);
                 }
             }
 
             // Check minimum content length
             if (strlen($content) < ($minLengths[$tier] ?? 30)) {
-                throw new Exception("Documentation appears too short for tier: {$tier} (length: ".strlen($content).')');
+                $warnings[] = "Tier {$tier} seems short (length: ".strlen($content).')';
+                Log::warning('CascadeDocs: Documentation seems short', [
+                    'file' => $this->file_path,
+                    'tier' => $tier,
+                    'length' => strlen($content),
+                    'expected_min' => $minLengths[$tier] ?? 30,
+                    'content_preview' => substr($content, 0, 100),
+                ]);
             }
 
             // Only check for obvious truncation indicators
             $trimmedContent = trim($content);
 
             // Check if it ends with incomplete markdown or code block
-            if (preg_match('/```[^`]*$/', $trimmedContent) ||
-                preg_match('/`[^`]$/', $trimmedContent) ||
-                preg_match('/\|\s*$/', $trimmedContent)) {
-                throw new Exception("Documentation appears to be truncated - incomplete markdown structure in tier: {$tier}");
+            if (preg_match('/```[^`]*$/', $trimmedContent)) {
+                $warnings[] = "Tier {$tier} ends with incomplete code block";
+                Log::warning('CascadeDocs: Potential truncation - incomplete code block', [
+                    'file' => $this->file_path,
+                    'tier' => $tier,
+                    'ending' => substr($trimmedContent, -100),
+                ]);
+            } elseif (preg_match('/`[^`]$/', $trimmedContent)) {
+                $warnings[] = "Tier {$tier} ends with incomplete inline code";
+                Log::warning('CascadeDocs: Potential truncation - incomplete inline code', [
+                    'file' => $this->file_path,
+                    'tier' => $tier,
+                    'ending' => substr($trimmedContent, -50),
+                ]);
+            } elseif (preg_match('/\|\s*$/', $trimmedContent)) {
+                $warnings[] = "Tier {$tier} ends with incomplete table";
+                Log::warning('CascadeDocs: Potential truncation - incomplete table', [
+                    'file' => $this->file_path,
+                    'tier' => $tier,
+                    'ending' => substr($trimmedContent, -100),
+                ]);
             }
+        }
+
+        // Log a summary if there were any warnings
+        if (!empty($warnings)) {
+            Log::info('CascadeDocs: Documentation validation warnings', [
+                'file' => $this->file_path,
+                'warnings' => $warnings,
+                'note' => 'Documentation was still saved despite warnings',
+            ]);
+        } else {
+            Log::info('CascadeDocs: Documentation validation passed', [
+                'file' => $this->file_path,
+            ]);
         }
     }
 
