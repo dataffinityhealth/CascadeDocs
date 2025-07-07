@@ -124,12 +124,12 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
 
         // Build the complete prompt
         $prompt = "# Module Assignment Task\n\n";
-        $prompt .= "You are tasked with organizing files into modules for a healthcare platform documentation system.\n\n";
+        $prompt .= "You are tasked with organizing files into modules for a software documentation system.\n\n";
         $prompt .= "## EXISTING MODULES\n\n";
         $prompt .= $existingModulesSection."\n\n";
         $prompt .= '## UNASSIGNED FILES ('.$unassignedDocs->count()." files)\n\n";
         $prompt .= $unassignedFilesSection."\n\n";
-        $prompt .= $this->getAssignmentInstructions();
+        $prompt .= $this->getAssignmentInstructions($moduleSummaries);
 
         return $prompt;
     }
@@ -501,9 +501,19 @@ EOT;
     /**
      * Get assignment instructions for the AI.
      */
-    protected function getAssignmentInstructions(): string
+    protected function getAssignmentInstructions(Collection $moduleSummaries): string
     {
-        return <<<'EOT'
+        // Extract module slugs from the existing modules
+        $moduleSlugsList = '';
+        if ($moduleSummaries->isNotEmpty()) {
+            $slugs = $moduleSummaries->keys()->map(function ($slug) {
+                return "- {$slug}";
+            })->implode("\n");
+
+            $moduleSlugsList = "\nExisting module slugs you should use for 'assign_to_existing':\n{$slugs}\n";
+        }
+
+        return <<<EOT
 ## INSTRUCTIONS
 
 Analyze ALL unassigned files and organize them in two phases:
@@ -519,16 +529,16 @@ PHASE 1 - Assign to existing modules:
 PHASE 2 - Create new module suggestions:
 - From the remaining unassigned files, identify natural groupings that could form NEW modules
 - Look for files that share common functionality, purpose, or domain
-- **Use directory structure as a strong hint for grouping** (e.g., all files in `app/Livewire/DataRequests/` likely form a cohesive module)
+- **Use directory structure as a strong hint for grouping** (e.g., all files in `app/Livewire/Products/` likely form a cohesive module)
 - Group related components (e.g., Livewire components, controllers, services, models)
 - Each new module must have at least 3 related files
 
 IMPORTANT: Process ALL files in the batch - either assign them to existing modules OR group them into new module suggestions. Aim to minimize unprocessed files.
 
 Example path analysis:
-- File path: `app/Livewire/DataRequests/Create.php` → Should be assigned to "data-requests" or similar module
+- File path: `app/Livewire/Products/Create.php` → Should be assigned to "products" or similar module
 - File path: `app/Http/Controllers/Auth/LoginController.php` → Should be assigned to "authentication" module
-- File path: `app/Models/DataRequest.php` → Should be assigned to "data-requests" module (note: "DataRequest" in filename)
+- File path: `app/Models/Order.php` → Should be assigned to "orders" module (note: "Order" in filename)
 
 Return your response as a JSON object with the following structure:
 
@@ -564,22 +574,7 @@ Guidelines:
 - Match path keywords to module names (e.g., "DataRequest" in path → data-request module)
 - Consider both directory structure AND file purpose when grouping
 - Files in the same logical directory often belong together
-
-Common existing module slugs you might use:
-- age-of-majority, api-services, assent-handling, audit-logging, authentication
-- badge-system, charts-visualization, clinic-admin, clinic-registration, clinical-trials
-- clinician-management, community-polls, consent-forms, consent-process, content-management
-- database-management, dataset-polls, documentation, email-campaigns, email-system
-- external-apis, file-management, genetic-testing, health-diary, hipaa-compliance
-- historical-records, job-management, medical-data-export, medical-records
-- password-security, patient-activity, patient-analytics, patient-delegates
-- patient-invitations, patient-messaging, patient-profile, patient-registration
-- patient-withdrawal, pii-protection, questionnaire-builder, questionnaire-dependencies
-- questionnaire-scheduling, questionnaire-versioning, redcap-import, report-builder
-- research-export, roles-permissions, search-filters, statistical-analysis
-- system-configuration, system-security, translation-management, trial-matching
-- two-factor-auth, unit-translation, wearable-integration
-
+{$moduleSlugsList}
 IMPORTANT: Return ONLY valid JSON. Do not include markdown code blocks or any other text.
 
 EOT;
@@ -657,7 +652,7 @@ EOT;
     protected function buildInitialModuleCreationPrompt(Collection $filesWithDocs): string
     {
         $prompt = "# Initial Module Creation Task\n\n";
-        $prompt .= 'You are tasked with creating an initial module structure for a healthcare platform. ';
+        $prompt .= 'You are tasked with creating an initial module structure for a software application. ';
         $prompt .= "Analyze ALL the following files and create a comprehensive module structure that organizes them logically.\n\n";
         $prompt .= "IMPORTANT: Group files into coherent modules based on functionality. It's okay to leave files unassigned if they don't clearly belong to any module.\n\n";
         $prompt .= '## FILES TO ORGANIZE ('.$filesWithDocs->count()." files)\n\n";
@@ -717,16 +712,16 @@ Return your response as a JSON object with the following structure:
             ]
         },
         {
-            "module_name": "Data Requests",
-            "module_slug": "data-requests",
-            "description": "Manages data request functionality including creation, editing, viewing, and processing. Includes models, controllers, Livewire components, and related jobs.",
+            "module_name": "User Management",
+            "module_slug": "user-management",
+            "description": "Manages user profiles, settings, and administrative functions. Includes user models, profile management, and administrative interfaces.",
             "files": [
-                "app/Models/DataRequest.php",
-                "app/Livewire/DataRequests/Create.php",
-                "app/Livewire/DataRequests/Edit.php",
-                "app/Livewire/DataRequests/Index.php",
-                "app/Livewire/DataRequests/Show.php",
-                "app/Jobs/CreateDataRequestZipJob.php"
+                "app/Models/User.php",
+                "app/Http/Controllers/UserController.php",
+                "app/Livewire/Users/Index.php",
+                "app/Livewire/Users/Edit.php",
+                "app/Policies/UserPolicy.php",
+                "app/Notifications/UserNotification.php"
             ]
         }
     ],
@@ -764,7 +759,7 @@ EOT;
 
         try {
             // Add system prompt for better JSON response
-            $systemPrompt = 'You are a module organization assistant for a healthcare platform. You analyze files and create logical module groupings. Always respond with valid JSON only, no markdown code blocks or extra text.';
+            $systemPrompt = 'You are a module organization assistant for a software documentation system. You analyze files and create logical module groupings based on their functionality and relationships. Always respond with valid JSON only, no markdown code blocks or extra text.';
 
             $fullPrompt = $systemPrompt."\n\n".$prompt;
 

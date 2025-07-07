@@ -314,7 +314,7 @@ class AssignFilesToModulesCommand extends Command
 
         try {
             // Add specific instructions for JSON response
-            $systemPrompt = 'You are a module assignment assistant for a healthcare platform. You analyze files and suggest which modules they should belong to. Always respond with valid JSON only, no markdown code blocks or extra text.';
+            $systemPrompt = 'You are a module assignment assistant for a software documentation system. You analyze files and suggest which modules they should belong to based on their functionality and relationships. Always respond with valid JSON only, no markdown code blocks or extra text.';
 
             $fullPrompt = $systemPrompt."\n\n".$prompt;
 
