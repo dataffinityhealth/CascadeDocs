@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 class ModuleMappingService
 {
     protected Collection $module_mappings;
+
     protected array $module_metadata = [];
 
     public function __construct()
@@ -21,10 +22,8 @@ class ModuleMappingService
     {
         $relative_path = $this->get_relative_path($file_path);
 
-        foreach ($this->module_mappings as $module_slug => $files)
-        {
-            if ($files->contains($relative_path))
-            {
+        foreach ($this->module_mappings as $module_slug => $files) {
+            if ($files->contains($relative_path)) {
                 return $module_slug;
             }
         }
@@ -50,53 +49,45 @@ class ModuleMappingService
     public function suggest_module_for_new_file(string $file_path): ?string
     {
         $relative_path = $this->get_relative_path($file_path);
-        $path_parts    = explode('/', $relative_path);
+        $path_parts = explode('/', $relative_path);
 
         // Don't assign documentation system files to regular modules
         $excludedDirs = array_merge(
             config('cascadedocs.exclude.directories', []),
             ['Documentation/', 'documentation']
         );
-        if (Str::contains($relative_path, $excludedDirs))
-        {
+        if (Str::contains($relative_path, $excludedDirs)) {
             return null;
         }
 
         // First, try to find modules with files in the same directory
-        $directory           = dirname($relative_path);
-        $best_match          = null;
+        $directory = dirname($relative_path);
+        $best_match = null;
         $highest_match_count = 0;
 
-        foreach ($this->module_mappings as $module_slug => $files)
-        {
-            $files_in_same_dir = $files->filter(function ($file) use ($directory)
-            {
-                return Str::startsWith($file, $directory . '/');
+        foreach ($this->module_mappings as $module_slug => $files) {
+            $files_in_same_dir = $files->filter(function ($file) use ($directory) {
+                return Str::startsWith($file, $directory.'/');
             });
 
-            if ($files_in_same_dir->count() > $highest_match_count)
-            {
+            if ($files_in_same_dir->count() > $highest_match_count) {
                 $highest_match_count = $files_in_same_dir->count();
-                $best_match          = $module_slug;
+                $best_match = $module_slug;
             }
         }
 
         // Only suggest a module if there are at least 2 files in the same directory
         // This prevents false positives from generic directories
-        if ($best_match && $highest_match_count >= 2)
-        {
+        if ($best_match && $highest_match_count >= 2) {
             return $best_match;
         }
 
         // If no direct match, try to match based on path patterns
         $namespace_parts = $this->extract_namespace_parts($relative_path);
 
-        foreach ($this->module_mappings as $module_slug => $files)
-        {
-            foreach ($namespace_parts as $part)
-            {
-                if (Str::contains($module_slug, Str::slug($part)))
-                {
+        foreach ($this->module_mappings as $module_slug => $files) {
+            foreach ($namespace_parts as $part) {
+                if (Str::contains($module_slug, Str::slug($part))) {
                     return $module_slug;
                 }
             }
@@ -109,36 +100,30 @@ class ModuleMappingService
     {
         $metadata_path = base_path(config('cascadedocs.paths.modules.metadata'));
 
-        if (! File::exists($metadata_path))
-        {
+        if (! File::exists($metadata_path)) {
             return;
         }
 
         $metadata_files = File::files($metadata_path);
 
-        foreach ($metadata_files as $file)
-        {
-            if ($file->getExtension() !== 'json')
-            {
+        foreach ($metadata_files as $file) {
+            if ($file->getExtension() !== 'json') {
                 continue;
             }
 
             $metadata = json_decode(File::get($file->getPathname()), true);
 
-            if ($metadata)
-            {
+            if ($metadata) {
                 $module_slug = $metadata['module_slug'];
-                $files       = collect();
+                $files = collect();
 
                 // Add documented files
-                foreach ($metadata['files'] ?? [] as $fileInfo)
-                {
+                foreach ($metadata['files'] ?? [] as $fileInfo) {
                     $files->push($fileInfo['path']);
                 }
 
                 // Add undocumented files
-                foreach ($metadata['undocumented_files'] ?? [] as $file)
-                {
+                foreach ($metadata['undocumented_files'] ?? [] as $file) {
                     $files->push($file);
                 }
 
@@ -153,29 +138,24 @@ class ModuleMappingService
      */
     protected function parse_module_file(string $content): ?array
     {
-        $lines       = explode("\n", $content);
-        $metadata    = [];
-        $files       = [];
+        $lines = explode("\n", $content);
+        $metadata = [];
+        $files = [];
         $in_metadata = false;
         $module_slug = null;
 
-        foreach ($lines as $line)
-        {
+        foreach ($lines as $line) {
             // Parse YAML front matter
-            if (trim($line) === '---')
-            {
+            if (trim($line) === '---') {
                 $in_metadata = ! $in_metadata;
 
                 continue;
             }
 
-            if ($in_metadata)
-            {
-                if (preg_match('/^module_slug:\s*(.+)$/', $line, $matches))
-                {
+            if ($in_metadata) {
+                if (preg_match('/^module_slug:\s*(.+)$/', $line, $matches)) {
                     $module_slug = trim($matches[1]);
-                } elseif (preg_match('/^(\w+):\s*(.+)$/', $line, $matches))
-                {
+                } elseif (preg_match('/^(\w+):\s*(.+)$/', $line, $matches)) {
                     $metadata[trim($matches[1])] = trim($matches[2]);
                 }
 
@@ -183,20 +163,18 @@ class ModuleMappingService
             }
 
             // Parse file paths from bullet points
-            if (preg_match('/^\s*-\s*\*\*`([^`]+)`\*\*/', $line, $matches))
-            {
+            if (preg_match('/^\s*-\s*\*\*`([^`]+)`\*\*/', $line, $matches)) {
                 $files[] = trim($matches[1]);
             }
         }
 
-        if (! $module_slug)
-        {
+        if (! $module_slug) {
             return null;
         }
 
         return [
-            'slug'     => $module_slug,
-            'files'    => $files,
+            'slug' => $module_slug,
+            'files' => $files,
             'metadata' => $metadata,
         ];
     }
@@ -205,9 +183,8 @@ class ModuleMappingService
     {
         $base_path = base_path();
 
-        if (Str::startsWith($file_path, $base_path))
-        {
-            return Str::after($file_path, $base_path . DIRECTORY_SEPARATOR);
+        if (Str::startsWith($file_path, $base_path)) {
+            return Str::after($file_path, $base_path.DIRECTORY_SEPARATOR);
         }
 
         return $file_path;
@@ -215,19 +192,17 @@ class ModuleMappingService
 
     protected function extract_namespace_parts(string $relative_path): array
     {
-        $parts           = explode('/', $relative_path);
+        $parts = explode('/', $relative_path);
         $namespace_parts = [];
 
         // Extract meaningful parts from the path
-        foreach ($parts as $part)
-        {
-            if (in_array($part, config('cascadedocs.excluded_namespace_parts')))
-            {
+        foreach ($parts as $part) {
+            if (in_array($part, config('cascadedocs.excluded_namespace_parts'))) {
                 continue;
             }
 
             // Convert camelCase and PascalCase to words
-            $words           = preg_split('/(?=[A-Z])/', $part);
+            $words = preg_split('/(?=[A-Z])/', $part);
             $namespace_parts = array_merge($namespace_parts, array_filter($words));
         }
 

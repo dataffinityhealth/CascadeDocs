@@ -2,7 +2,6 @@
 
 namespace Lumiio\CascadeDocs\Jobs\Documentation;
 
-use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Bus\Queueable;
@@ -12,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
@@ -22,7 +22,9 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
+
     public int $tries;
+
     public int $timeout;
 
     public function __construct(
@@ -38,11 +40,10 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
     public function handle(): void
     {
-        $diff_service = new DocumentationDiffService();
+        $diff_service = new DocumentationDiffService;
 
         // Check if file still exists
-        if (! File::exists($this->file_path))
-        {
+        if (! File::exists($this->file_path)) {
             $this->handle_deleted_file();
 
             return;
@@ -50,11 +51,10 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
         // Get the current content and diff
         $current_content = File::get($this->file_path);
-        $git_diff        = $diff_service->get_file_diff($this->file_path, $this->from_sha, $this->to_sha);
+        $git_diff = $diff_service->get_file_diff($this->file_path, $this->from_sha, $this->to_sha);
 
         // If this is a new file (no diff), use our tracking generation job
-        if (! $git_diff)
-        {
+        if (! $git_diff) {
             GenerateAndTrackDocumentationJob::dispatch($this->file_path, $this->to_sha, $this->model);
 
             return;
@@ -63,8 +63,7 @@ class UpdateDocumentationForFileJob implements ShouldQueue
         // Load existing documentation
         $existing_docs = $this->load_existing_documentation();
 
-        if (empty($existing_docs))
-        {
+        if (empty($existing_docs)) {
             // No existing documentation, use our tracking generation job
             GenerateAndTrackDocumentationJob::dispatch($this->file_path, $this->to_sha, $this->model);
 
@@ -78,13 +77,11 @@ class UpdateDocumentationForFileJob implements ShouldQueue
             $existing_docs
         );
 
-        try
-        {
-            $response     = $this->get_response_from_provider($prompt, $this->model, json_mode: true);
+        try {
+            $response = $this->get_response_from_provider($prompt, $this->model, json_mode: true);
             $updated_docs = json_decode($response, true);
 
-            if (! $updated_docs || ! is_array($updated_docs))
-            {
+            if (! $updated_docs || ! is_array($updated_docs)) {
                 throw new Exception('Invalid JSON response from LLM');
             }
 
@@ -93,29 +90,25 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
             // Always update the log when we process a file, even if only SHA was updated
             $this->update_file_in_log($this->file_path);
-        } catch (ClaudeRateLimitException $e)
-        {
+        } catch (ClaudeRateLimitException $e) {
             // Let the job retry automatically
             $this->release(config('cascadedocs.queue.rate_limit_delay', 60)); // Release back to queue
 
             return;
-        } catch (Exception $e)
-        {
-            throw new Exception('Failed to update documentation: ' . $e->getMessage());
+        } catch (Exception $e) {
+            throw new Exception('Failed to update documentation: '.$e->getMessage());
         }
     }
 
     protected function load_existing_documentation(): array
     {
-        $docs  = [];
+        $docs = [];
         $tiers = config('cascadedocs.tiers');
 
-        foreach ($tiers as $tier => $folder)
-        {
+        foreach ($tiers as $tier => $folder) {
             $doc_path = $this->get_tier_document_path($this->file_path, $tier);
 
-            if (File::exists($doc_path))
-            {
+            if (File::exists($doc_path)) {
                 $docs[$tier] = File::get($doc_path);
             }
         }
@@ -125,26 +118,21 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
     protected function save_updated_documentation(array $updated_docs, array $existing_docs): bool
     {
-        $tiers        = ['micro' => 'short', 'standard' => 'medium', 'expansive' => 'full'];
+        $tiers = ['micro' => 'short', 'standard' => 'medium', 'expansive' => 'full'];
         $changes_made = false;
-        $current_sha  = (new DocumentationDiffService())->get_current_commit_sha();
+        $current_sha = (new DocumentationDiffService)->get_current_commit_sha();
 
-        foreach ($tiers as $tier => $folder)
-        {
+        foreach ($tiers as $tier => $folder) {
             $doc_path = $this->get_tier_document_path($this->file_path, $tier);
 
             // Check if this tier has existing documentation
-            if (isset($existing_docs[$tier]))
-            {
+            if (isset($existing_docs[$tier])) {
                 // If the tier was updated with new content
-                if (isset($updated_docs[$tier]) && $updated_docs[$tier] !== null)
-                {
+                if (isset($updated_docs[$tier]) && $updated_docs[$tier] !== null) {
                     // Skip if content is identical to existing
-                    if ($updated_docs[$tier] === $existing_docs[$tier])
-                    {
+                    if ($updated_docs[$tier] === $existing_docs[$tier]) {
                         // For expansive tier, still update SHA even if content is unchanged
-                        if ($tier === 'expansive')
-                        {
+                        if ($tier === 'expansive') {
                             $this->update_sha_only($doc_path, $current_sha);
                             $changes_made = true;
                         }
@@ -155,17 +143,14 @@ class UpdateDocumentationForFileJob implements ShouldQueue
                     // Content changed, write the new documentation
                     $this->write_documentation_file($doc_path, $updated_docs[$tier]);
                     $changes_made = true;
-                } else
-                {
+                } else {
                     // No update from AI, but for expansive tier we should still update SHA
-                    if ($tier === 'expansive')
-                    {
+                    if ($tier === 'expansive') {
                         $this->update_sha_only($doc_path, $current_sha);
                         $changes_made = true;
                     }
                 }
-            } elseif (isset($updated_docs[$tier]) && $updated_docs[$tier] !== null)
-            {
+            } elseif (isset($updated_docs[$tier]) && $updated_docs[$tier] !== null) {
                 // New documentation for a tier that didn't exist before
                 $this->write_documentation_file($doc_path, $updated_docs[$tier]);
                 $changes_made = true;
@@ -179,11 +164,12 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     {
         $tier_map = config('cascadedocs.tiers');
 
-        $relative_path  = Str::after($source_file_path, base_path() . DIRECTORY_SEPARATOR);
+        $relative_path = Str::after($source_file_path, base_path().DIRECTORY_SEPARATOR);
         $file_extension = pathinfo($source_file_path, PATHINFO_EXTENSION);
-        $relative_path  = Str::beforeLast($relative_path, '.' . $file_extension);
+        $relative_path = Str::beforeLast($relative_path, '.'.$file_extension);
 
         $output_path = config('cascadedocs.paths.output');
+
         return base_path("{$output_path}{$tier_map[$tier]}/{$relative_path}.md");
     }
 
@@ -191,16 +177,14 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     {
         $doc_directory = dirname($doc_path);
 
-        if (! File::exists($doc_directory))
-        {
+        if (! File::exists($doc_directory)) {
             File::makeDirectory($doc_directory, config('cascadedocs.permissions.directory', 0755), true);
         }
 
         // Update commit SHA in content if it's the expansive tier
-        if (Str::contains($doc_path, '/full/'))
-        {
-            $current_sha = (new DocumentationDiffService())->get_current_commit_sha();
-            $content     = preg_replace('/commit_sha:\s*\w+/', "commit_sha: {$current_sha}", $content);
+        if (Str::contains($doc_path, '/full/')) {
+            $current_sha = (new DocumentationDiffService)->get_current_commit_sha();
+            $content = preg_replace('/commit_sha:\s*\w+/', "commit_sha: {$current_sha}", $content);
         }
 
         File::put($doc_path, $content);
@@ -208,17 +192,15 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
     protected function update_sha_only(string $doc_path, string $current_sha): void
     {
-        if (! File::exists($doc_path))
-        {
+        if (! File::exists($doc_path)) {
             return;
         }
 
-        $content         = File::get($doc_path);
+        $content = File::get($doc_path);
         $updated_content = preg_replace('/commit_sha:\s*\w+/', "commit_sha: {$current_sha}", $content);
 
         // Only write if SHA actually changed
-        if ($content !== $updated_content)
-        {
+        if ($content !== $updated_content) {
             File::put($doc_path, $updated_content);
         }
     }
@@ -228,12 +210,10 @@ class UpdateDocumentationForFileJob implements ShouldQueue
         // Remove documentation files for deleted source files
         $tiers = config('cascadedocs.tiers');
 
-        foreach ($tiers as $tier => $folder)
-        {
+        foreach ($tiers as $tier => $folder) {
             $doc_path = $this->get_tier_document_path($this->file_path, $tier);
 
-            if (File::exists($doc_path))
-            {
+            if (File::exists($doc_path)) {
                 File::delete($doc_path);
             }
         }
@@ -244,14 +224,14 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
     protected function update_file_in_log(string $file_path): void
     {
-        $diff_service = new DocumentationDiffService();
-        $log          = $diff_service->load_update_log();
+        $diff_service = new DocumentationDiffService;
+        $log = $diff_service->load_update_log();
 
-        $relative_path = Str::after($file_path, base_path() . DIRECTORY_SEPARATOR);
-        $current_sha   = $diff_service->get_file_last_commit_sha($file_path);
+        $relative_path = Str::after($file_path, base_path().DIRECTORY_SEPARATOR);
+        $current_sha = $diff_service->get_file_last_commit_sha($file_path);
 
         $log['files'][$relative_path] = [
-            'sha'          => $current_sha,
+            'sha' => $current_sha,
             'last_updated' => Carbon::now()->toIso8601String(),
         ];
 
@@ -260,10 +240,10 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
     protected function remove_file_from_log(string $file_path): void
     {
-        $diff_service = new DocumentationDiffService();
-        $log          = $diff_service->load_update_log();
+        $diff_service = new DocumentationDiffService;
+        $log = $diff_service->load_update_log();
 
-        $relative_path = Str::after($file_path, base_path() . DIRECTORY_SEPARATOR);
+        $relative_path = Str::after($file_path, base_path().DIRECTORY_SEPARATOR);
 
         unset($log['files'][$relative_path]);
 
@@ -275,14 +255,13 @@ class UpdateDocumentationForFileJob implements ShouldQueue
         string $git_diff,
         array $existing_docs
     ): string {
-        $file_extension      = pathinfo($this->file_path, PATHINFO_EXTENSION);
+        $file_extension = pathinfo($this->file_path, PATHINFO_EXTENSION);
         $language_code_block = $file_extension === 'php' ? 'php' : 'javascript';
-        $class_name          = basename($this->file_path, '.' . $file_extension);
+        $class_name = basename($this->file_path, '.'.$file_extension);
 
         $existing_docs_section = '';
 
-        foreach ($existing_docs as $tier => $content)
-        {
+        foreach ($existing_docs as $tier => $content) {
             $existing_docs_section .= "\n### Current {$tier} documentation:\n{$content}\n";
         }
 

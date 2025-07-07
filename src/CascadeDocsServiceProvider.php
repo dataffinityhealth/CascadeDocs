@@ -2,22 +2,22 @@
 
 namespace Lumiio\CascadeDocs;
 
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Lumiio\CascadeDocs\Commands\Documentation\AnalyzeModuleAssignmentsCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\AssignFilesToModulesCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\CreateModuleCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForAllFilesCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand;
+use Lumiio\CascadeDocs\Commands\Documentation\GenerateArchitectureDocumentationCommand;
+use Lumiio\CascadeDocs\Commands\Documentation\GenerateClassDocumentationCommand;
+use Lumiio\CascadeDocs\Commands\Documentation\GenerateModuleDocumentationCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\SyncModuleAssignmentsCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\UpdateAllModuleDocumentationCommand;
+use Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationForChangedFilesCommand;
-use Lumiio\CascadeDocs\Commands\Documentation\GenerateClassDocumentationCommand;
-use Lumiio\CascadeDocs\Commands\Documentation\GenerateModuleDocumentationCommand;
-use Lumiio\CascadeDocs\Commands\Documentation\GenerateArchitectureDocumentationCommand;
-use Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
+use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 class CascadeDocsServiceProvider extends PackageServiceProvider
 {
@@ -33,7 +33,7 @@ class CascadeDocsServiceProvider extends PackageServiceProvider
         $this->app->singleton(\Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService::class);
         $this->app->singleton(\Lumiio\CascadeDocs\Services\Documentation\ModuleFileUpdater::class);
         $this->app->singleton(\Lumiio\CascadeDocs\Services\Documentation\ModuleMappingService::class);
-        
+
         // Register main class
         $this->app->singleton(\Lumiio\CascadeDocs\CascadeDocs::class);
     }

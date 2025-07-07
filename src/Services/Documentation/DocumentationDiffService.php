@@ -16,19 +16,16 @@ class DocumentationDiffService
 
         $result = Process::run("git diff --name-only {$from_sha} {$to_sha}");
 
-        if (! $result->successful())
-        {
-            throw new Exception('Failed to get changed files: ' . $result->errorOutput());
+        if (! $result->successful()) {
+            throw new Exception('Failed to get changed files: '.$result->errorOutput());
         }
 
         $files = collect(explode("\n", trim($result->output())))
             ->filter()
-            ->filter(function ($file)
-            {
+            ->filter(function ($file) {
                 return $this->is_documentable_file($file);
             })
-            ->map(function ($file)
-            {
+            ->map(function ($file) {
                 return base_path($file);
             });
 
@@ -41,27 +38,22 @@ class DocumentationDiffService
 
         $result = Process::run("git diff --name-status {$from_sha} {$to_sha}");
 
-        if (! $result->successful())
-        {
-            throw new Exception('Failed to get file status: ' . $result->errorOutput());
+        if (! $result->successful()) {
+            throw new Exception('Failed to get file status: '.$result->errorOutput());
         }
 
         $files = collect(explode("\n", trim($result->output())))
             ->filter()
-            ->filter(function ($line)
-            {
+            ->filter(function ($line) {
                 return Str::startsWith($line, 'A');
             })
-            ->map(function ($line)
-            {
+            ->map(function ($line) {
                 return trim(Str::after($line, 'A'));
             })
-            ->filter(function ($file)
-            {
+            ->filter(function ($file) {
                 return $this->is_documentable_file($file);
             })
-            ->map(function ($file)
-            {
+            ->map(function ($file) {
                 return base_path($file);
             });
 
@@ -74,27 +66,22 @@ class DocumentationDiffService
 
         $result = Process::run("git diff --name-status {$from_sha} {$to_sha}");
 
-        if (! $result->successful())
-        {
-            throw new Exception('Failed to get file status: ' . $result->errorOutput());
+        if (! $result->successful()) {
+            throw new Exception('Failed to get file status: '.$result->errorOutput());
         }
 
         $files = collect(explode("\n", trim($result->output())))
             ->filter()
-            ->filter(function ($line)
-            {
+            ->filter(function ($line) {
                 return Str::startsWith($line, 'D');
             })
-            ->map(function ($line)
-            {
+            ->map(function ($line) {
                 return trim(Str::after($line, 'D'));
             })
-            ->filter(function ($file)
-            {
+            ->filter(function ($file) {
                 return $this->is_documentable_file($file);
             })
-            ->map(function ($file)
-            {
+            ->map(function ($file) {
                 return base_path($file);
             });
 
@@ -107,8 +94,7 @@ class DocumentationDiffService
 
         $result = Process::run("git show {$commit_sha}:{$relative_path}");
 
-        if (! $result->successful())
-        {
+        if (! $result->successful()) {
             // File might not exist at that commit
             return null;
         }
@@ -123,8 +109,7 @@ class DocumentationDiffService
 
         $result = Process::run("git diff {$from_sha} {$to_sha} -- {$relative_path}");
 
-        if (! $result->successful())
-        {
+        if (! $result->successful()) {
             return null;
         }
 
@@ -135,9 +120,8 @@ class DocumentationDiffService
     {
         $result = Process::run('git rev-parse HEAD');
 
-        if (! $result->successful())
-        {
-            throw new Exception('Failed to get current commit SHA: ' . $result->errorOutput());
+        if (! $result->successful()) {
+            throw new Exception('Failed to get current commit SHA: '.$result->errorOutput());
         }
 
         return trim($result->output());
@@ -149,8 +133,7 @@ class DocumentationDiffService
 
         $result = Process::run("git log -1 --format=%H -- {$relative_path}");
 
-        if (! $result->successful() || empty(trim($result->output())))
-        {
+        if (! $result->successful() || empty(trim($result->output()))) {
             return null;
         }
 
@@ -161,13 +144,12 @@ class DocumentationDiffService
     {
         $log_path = base_path(config('cascadedocs.paths.tracking.documentation_update'));
 
-        if (! File::exists($log_path))
-        {
+        if (! File::exists($log_path)) {
             return [
-                'last_update_sha'       => null,
+                'last_update_sha' => null,
                 'last_update_timestamp' => null,
-                'files'                 => [],
-                'modules'               => [],
+                'files' => [],
+                'modules' => [],
             ];
         }
 
@@ -187,12 +169,11 @@ class DocumentationDiffService
     {
         $relative_path = $this->get_relative_path($file_path);
 
-        if (! isset($update_log['files'][$relative_path]))
-        {
+        if (! isset($update_log['files'][$relative_path])) {
             return true;
         }
 
-        $current_sha    = $this->get_file_last_commit_sha($file_path);
+        $current_sha = $this->get_file_last_commit_sha($file_path);
         $documented_sha = $update_log['files'][$relative_path]['sha'] ?? null;
 
         return $current_sha !== $documented_sha;
@@ -200,11 +181,10 @@ class DocumentationDiffService
 
     protected function is_documentable_file(string $file_path): bool
     {
-        $extension               = pathinfo($file_path, PATHINFO_EXTENSION);
+        $extension = pathinfo($file_path, PATHINFO_EXTENSION);
         $documentable_extensions = config('cascadedocs.file_types');
 
-        if (! in_array($extension, $documentable_extensions))
-        {
+        if (! in_array($extension, $documentable_extensions)) {
             return false;
         }
 
@@ -217,8 +197,7 @@ class DocumentationDiffService
                 break;
             }
         }
-        if (!$inSourceDir)
-        {
+        if (! $inSourceDir) {
             return false;
         }
 
@@ -230,9 +209,8 @@ class DocumentationDiffService
     {
         $base_path = base_path();
 
-        if (Str::startsWith($file_path, $base_path))
-        {
-            return Str::after($file_path, $base_path . DIRECTORY_SEPARATOR);
+        if (Str::startsWith($file_path, $base_path)) {
+            return Str::after($file_path, $base_path.DIRECTORY_SEPARATOR);
         }
 
         return $file_path;
@@ -241,29 +219,26 @@ class DocumentationDiffService
     public function analyze_changes_for_summary(Collection $changed_files): array
     {
         $summary = [
-            'total_files'      => $changed_files->count(),
-            'by_type'          => [],
-            'by_directory'     => [],
+            'total_files' => $changed_files->count(),
+            'by_type' => [],
+            'by_directory' => [],
             'affected_modules' => [],
         ];
 
-        $module_service = new ModuleMappingService();
+        $module_service = new ModuleMappingService;
 
-        foreach ($changed_files as $file)
-        {
+        foreach ($changed_files as $file) {
             $extension = pathinfo($file, PATHINFO_EXTENSION);
             $directory = dirname($this->get_relative_path($file));
 
             // Count by type
-            if (! isset($summary['by_type'][$extension]))
-            {
+            if (! isset($summary['by_type'][$extension])) {
                 $summary['by_type'][$extension] = 0;
             }
             $summary['by_type'][$extension]++;
 
             // Count by directory
-            if (! isset($summary['by_directory'][$directory]))
-            {
+            if (! isset($summary['by_directory'][$directory])) {
                 $summary['by_directory'][$directory] = 0;
             }
             $summary['by_directory'][$directory]++;
@@ -271,8 +246,7 @@ class DocumentationDiffService
             // Track affected modules
             $module = $module_service->get_module_for_file($file);
 
-            if ($module && ! in_array($module, $summary['affected_modules']))
-            {
+            if ($module && ! in_array($module, $summary['affected_modules'])) {
                 $summary['affected_modules'][] = $module;
             }
         }

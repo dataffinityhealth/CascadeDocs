@@ -3,8 +3,8 @@
 namespace Lumiio\CascadeDocs\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Orchestra\Testbench\TestCase as Orchestra;
 use Lumiio\CascadeDocs\CascadeDocsServiceProvider;
+use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra
 {

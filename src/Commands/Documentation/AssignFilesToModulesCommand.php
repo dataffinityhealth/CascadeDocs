@@ -2,17 +2,18 @@
 
 namespace Lumiio\CascadeDocs\Commands\Documentation;
 
-use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentAIService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentAIService;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
 class AssignFilesToModulesCommand extends Command
 {
     use ProviderResponseTrait;
+
     protected $signature = 'documentation:assign-files-to-modules
         {--dry-run : Preview changes without applying them}
         {--auto-create : Automatically create suggested new modules}
@@ -22,13 +23,15 @@ class AssignFilesToModulesCommand extends Command
         {--output-prompt : Output the generated prompt to a file}
         {--model= : The AI model to use for assignment}
         {--force : Apply changes without confirmation}';
+
     protected $description = 'Assign unassigned documentation files to modules using AI suggestions';
+
     protected ModuleAssignmentAIService $aiService;
 
     public function __construct()
     {
         parent::__construct();
-        $this->aiService = new ModuleAssignmentAIService();
+        $this->aiService = new ModuleAssignmentAIService;
     }
 
     public function handle(): int
@@ -41,8 +44,7 @@ class AssignFilesToModulesCommand extends Command
 
         $unassignedCount = count($analysis['unassigned_files']);
 
-        if ($unassignedCount === 0)
-        {
+        if ($unassignedCount === 0) {
             $this->info('✓ No unassigned files found! All files are assigned to modules.');
 
             return 0;
@@ -57,8 +59,7 @@ class AssignFilesToModulesCommand extends Command
         // Apply limit if specified
         $limit = (int) $this->option('limit');
 
-        if ($limit > 0)
-        {
+        if ($limit > 0) {
             $unassignedDocs = $unassignedDocs->take($limit);
             $this->info("Processing only {$limit} files as requested.");
         }
@@ -73,8 +74,7 @@ class AssignFilesToModulesCommand extends Command
         $prompt = $this->aiService->buildModuleAssignmentPrompt($unassignedDocs, $moduleSummaries);
 
         // Output prompt if requested
-        if ($this->option('output-prompt'))
-        {
+        if ($this->option('output-prompt')) {
             $promptPath = base_path('docs/generated-assignment-prompt.md');
             File::put($promptPath, $prompt);
             $this->info("Prompt saved to: {$promptPath}");
@@ -83,8 +83,7 @@ class AssignFilesToModulesCommand extends Command
         // Step 5: Get AI recommendations
         $this->info('Getting AI recommendations...');
 
-        if ($this->option('dry-run'))
-        {
+        if ($this->option('dry-run')) {
             $this->warn('DRY RUN MODE - Showing what would be done:');
             $this->showPromptPreview($prompt);
 
@@ -102,17 +101,16 @@ class AssignFilesToModulesCommand extends Command
 
         // Step 6: Process recommendations
         $this->info('Processing AI recommendations...');
-        $confidenceThreshold = $this->option('confidence') !== null 
-            ? (float) $this->option('confidence') 
+        $confidenceThreshold = $this->option('confidence') !== null
+            ? (float) $this->option('confidence')
             : config('cascadedocs.modules.default_confidence_threshold');
-        $processed           = $this->aiService->processAIRecommendations($recommendations, $confidenceThreshold);
+        $processed = $this->aiService->processAIRecommendations($recommendations, $confidenceThreshold);
 
         // Display results
         $this->displayRecommendations($processed);
 
         // Step 7: Apply assignments if not in dry-run mode
-        if ($this->shouldApplyChanges($processed))
-        {
+        if ($this->shouldApplyChanges($processed)) {
             $this->applyChanges($processed);
         }
 
@@ -121,7 +119,7 @@ class AssignFilesToModulesCommand extends Command
 
     protected function showPromptPreview(string $prompt): void
     {
-        $lines   = explode("\n", $prompt);
+        $lines = explode("\n", $prompt);
         $preview = implode("\n", array_slice($lines, 0, 50));
 
         $this->line("\n--- PROMPT PREVIEW (first 50 lines) ---");
@@ -136,21 +134,17 @@ class AssignFilesToModulesCommand extends Command
         $this->info('=== AI Recommendations Summary ===');
 
         // Assignments to existing modules
-        if (! empty($processed['assign_to_existing']))
-        {
+        if (! empty($processed['assign_to_existing'])) {
             $this->info("\nFiles to assign to existing modules:");
 
-            foreach ($processed['assign_to_existing'] as $assignment)
-            {
+            foreach ($processed['assign_to_existing'] as $assignment) {
                 $this->line("  Module: {$assignment['module']} (confidence: {$assignment['confidence']})");
 
-                foreach ($assignment['files'] as $file)
-                {
+                foreach ($assignment['files'] as $file) {
                     $this->line("    - {$file}");
                 }
 
-                if (! empty($assignment['reasoning']))
-                {
+                if (! empty($assignment['reasoning'])) {
                     $this->line("    Reasoning: {$assignment['reasoning']}");
                 }
                 $this->newLine();
@@ -158,24 +152,20 @@ class AssignFilesToModulesCommand extends Command
         }
 
         // New module suggestions
-        if (! empty($processed['create_new_modules']))
-        {
+        if (! empty($processed['create_new_modules'])) {
             $this->info("\nSuggested new modules:");
 
-            foreach ($processed['create_new_modules'] as $module)
-            {
+            foreach ($processed['create_new_modules'] as $module) {
                 $this->line("  Module: {$module['name']} ({$module['slug']})");
                 $this->line("  Description: {$module['description']}");
                 $this->line("  Confidence: {$module['confidence']}");
                 $this->line('  Files:');
 
-                foreach ($module['files'] as $file)
-                {
+                foreach ($module['files'] as $file) {
                     $this->line("    - {$file}");
                 }
 
-                if (! empty($module['reasoning']))
-                {
+                if (! empty($module['reasoning'])) {
                     $this->line("  Reasoning: {$module['reasoning']}");
                 }
                 $this->newLine();
@@ -183,25 +173,21 @@ class AssignFilesToModulesCommand extends Command
         }
 
         // Low confidence assignments
-        if (! empty($processed['low_confidence']))
-        {
+        if (! empty($processed['low_confidence'])) {
             $this->warn("\nLow confidence assignments (require manual review):");
 
-            foreach ($processed['low_confidence'] as $assignment)
-            {
-                $this->line('  Files: ' . implode(', ', $assignment['files']));
+            foreach ($processed['low_confidence'] as $assignment) {
+                $this->line('  Files: '.implode(', ', $assignment['files']));
                 $this->line("  Suggested: {$assignment['module']} (confidence: {$assignment['confidence']})");
                 $this->newLine();
             }
         }
 
         // Errors
-        if (! empty($processed['errors']))
-        {
+        if (! empty($processed['errors'])) {
             $this->error("\nErrors encountered:");
 
-            foreach ($processed['errors'] as $error)
-            {
+            foreach ($processed['errors'] as $error) {
                 $this->line("  - {$error}");
             }
         }
@@ -211,21 +197,18 @@ class AssignFilesToModulesCommand extends Command
     {
         $hasChanges = ! empty($processed['assign_to_existing']) || ! empty($processed['create_new_modules']);
 
-        if (! $hasChanges)
-        {
+        if (! $hasChanges) {
             $this->info('No changes to apply.');
 
             return false;
         }
 
-        if ($this->option('dry-run'))
-        {
+        if ($this->option('dry-run')) {
             return false;
         }
 
         // If force or quiet option is set, apply without confirmation
-        if ($this->option('force') || $this->option('quiet'))
-        {
+        if ($this->option('force') || $this->option('quiet')) {
             return true;
         }
 
@@ -236,8 +219,7 @@ class AssignFilesToModulesCommand extends Command
             'yes'
         );
 
-        if ($choice === 'feedback')
-        {
+        if ($choice === 'feedback') {
             $this->handleFeedbackLoop($processed);
 
             return false;
@@ -251,47 +233,39 @@ class AssignFilesToModulesCommand extends Command
         $this->info('Applying changes...');
 
         // Apply assignments to existing modules
-        if (! empty($processed['assign_to_existing']))
-        {
+        if (! empty($processed['assign_to_existing'])) {
             $this->info('Assigning files to existing modules...');
 
             $results = $this->aiService->applyModuleAssignments($processed['assign_to_existing']);
 
-            foreach ($results['success'] as $success)
-            {
+            foreach ($results['success'] as $success) {
                 $this->info("✓ Added {$success['files_added']} files to {$success['module']}");
             }
 
-            foreach ($results['failed'] as $failure)
-            {
+            foreach ($results['failed'] as $failure) {
                 $this->error("✗ Failed to update {$failure['module']}: {$failure['reason']}");
             }
         }
 
         // Create new modules if auto-create is enabled
-        if (! empty($processed['create_new_modules']) && $this->option('auto-create'))
-        {
+        if (! empty($processed['create_new_modules']) && $this->option('auto-create')) {
             $this->info('Creating new modules...');
 
             $results = $this->aiService->createNewModules($processed['create_new_modules']);
 
-            foreach ($results['success'] as $success)
-            {
+            foreach ($results['success'] as $success) {
                 $this->info("✓ Created module {$success['module']} with {$success['files_added']} files");
             }
 
-            foreach ($results['failed'] as $failure)
-            {
+            foreach ($results['failed'] as $failure) {
                 $this->error("✗ Failed to create {$failure['module']}: {$failure['reason']}");
             }
-        } elseif (! empty($processed['create_new_modules']))
-        {
+        } elseif (! empty($processed['create_new_modules'])) {
             $this->warn('New modules suggested but --auto-create not enabled. Run with --auto-create to create them.');
         }
 
         // Handle interactive mode for low confidence
-        if (! empty($processed['low_confidence']) && $this->option('interactive'))
-        {
+        if (! empty($processed['low_confidence']) && $this->option('interactive')) {
             $this->handleLowConfidenceInteractive($processed['low_confidence']);
         }
 
@@ -310,25 +284,22 @@ class AssignFilesToModulesCommand extends Command
     {
         $this->info("\nReviewing low confidence assignments...");
 
-        foreach ($lowConfidence as $assignment)
-        {
-            $this->info("\nFiles: " . implode(', ', $assignment['files']));
+        foreach ($lowConfidence as $assignment) {
+            $this->info("\nFiles: ".implode(', ', $assignment['files']));
             $this->info("Suggested module: {$assignment['module']} (confidence: {$assignment['confidence']})");
 
-            if ($this->confirm('Accept this assignment?'))
-            {
+            if ($this->confirm('Accept this assignment?')) {
                 // Apply the assignment
                 $this->aiService->applyModuleAssignments([
                     [
-                        'module'     => $assignment['module'],
-                        'files'      => $assignment['files'],
+                        'module' => $assignment['module'],
+                        'files' => $assignment['files'],
                         'confidence' => $assignment['confidence'],
                     ],
                 ]);
 
                 $this->info('✓ Assignment applied.');
-            } else
-            {
+            } else {
                 $this->info('✗ Assignment skipped.');
             }
         }
@@ -341,12 +312,11 @@ class AssignFilesToModulesCommand extends Command
     {
         $this->info('Calling AI service for recommendations...');
 
-        try
-        {
+        try {
             // Add specific instructions for JSON response
             $systemPrompt = 'You are a module assignment assistant for a healthcare platform. You analyze files and suggest which modules they should belong to. Always respond with valid JSON only, no markdown code blocks or extra text.';
 
-            $fullPrompt = $systemPrompt . "\n\n" . $prompt;
+            $fullPrompt = $systemPrompt."\n\n".$prompt;
 
             // Call the AI service with JSON mode
             $response = $this->get_response_from_provider(
@@ -358,20 +328,17 @@ class AssignFilesToModulesCommand extends Command
             // Parse the JSON response
             $recommendations = json_decode($response, true);
 
-            if (! $recommendations || ! isset($recommendations['assignments']))
-            {
+            if (! $recommendations || ! isset($recommendations['assignments'])) {
                 throw new Exception('Invalid response format from AI service');
             }
 
             return $recommendations;
-        } catch (ClaudeRateLimitException $e)
-        {
+        } catch (ClaudeRateLimitException $e) {
             $this->error('Rate limit reached. Please try again later.');
 
             throw $e;
-        } catch (Exception $e)
-        {
-            $this->error('Failed to get AI recommendations: ' . $e->getMessage());
+        } catch (Exception $e) {
+            $this->error('Failed to get AI recommendations: '.$e->getMessage());
 
             // Provide fallback recommendations for testing
             $this->warn('Using fallback recommendations for demonstration...');
@@ -379,11 +346,11 @@ class AssignFilesToModulesCommand extends Command
             return [
                 'assignments' => [
                     [
-                        'action'     => 'assign_to_existing',
-                        'files'      => [],
-                        'module'     => 'system-configuration',
+                        'action' => 'assign_to_existing',
+                        'files' => [],
+                        'module' => 'system-configuration',
                         'confidence' => 0.0,
-                        'reasoning'  => 'AI service unavailable - manual assignment required',
+                        'reasoning' => 'AI service unavailable - manual assignment required',
                     ],
                 ],
             ];
@@ -400,18 +367,17 @@ class AssignFilesToModulesCommand extends Command
 
         $feedback = $this->ask('What would you like the AI to change about these assignments?');
 
-        if (empty($feedback))
-        {
+        if (empty($feedback)) {
             $this->warn('No feedback provided. Exiting.');
 
             return;
         }
 
         // Save feedback to a file for reference
-        $feedbackPath    = base_path('docs/module-assignment-feedback.txt');
-        $feedbackContent = "\n\n--- Feedback at " . Carbon::now()->toIso8601String() . " ---\n";
-        $feedbackContent .= "Original suggestions:\n" . json_encode($processed, JSON_PRETTY_PRINT) . "\n\n";
-        $feedbackContent .= 'User feedback: ' . $feedback . "\n";
+        $feedbackPath = base_path('docs/module-assignment-feedback.txt');
+        $feedbackContent = "\n\n--- Feedback at ".Carbon::now()->toIso8601String()." ---\n";
+        $feedbackContent .= "Original suggestions:\n".json_encode($processed, JSON_PRETTY_PRINT)."\n\n";
+        $feedbackContent .= 'User feedback: '.$feedback."\n";
 
         File::append($feedbackPath, $feedbackContent);
 
@@ -428,10 +394,9 @@ class AssignFilesToModulesCommand extends Command
     {
         // Get the original data
         $unassignedDocs = $this->aiService->getUnassignedFilesWithDocs();
-        $limit          = (int) $this->option('limit');
+        $limit = (int) $this->option('limit');
 
-        if ($limit > 0)
-        {
+        if ($limit > 0) {
             $unassignedDocs = $unassignedDocs->take($limit);
         }
 
@@ -441,9 +406,9 @@ class AssignFilesToModulesCommand extends Command
         $originalPrompt = $this->aiService->buildModuleAssignmentPrompt($unassignedDocs, $moduleSummaries);
 
         // Add feedback to the prompt
-        $promptWithFeedback = $originalPrompt . "\n\n## USER FEEDBACK\n\n";
+        $promptWithFeedback = $originalPrompt."\n\n## USER FEEDBACK\n\n";
         $promptWithFeedback .= "The user reviewed your previous suggestions and provided this feedback:\n";
-        $promptWithFeedback .= $feedback . "\n\n";
+        $promptWithFeedback .= $feedback."\n\n";
         $promptWithFeedback .= 'Please provide new suggestions that address this feedback.';
 
         // Get new recommendations
@@ -452,13 +417,12 @@ class AssignFilesToModulesCommand extends Command
 
         // Process and display new recommendations
         $confidenceThreshold = (float) $this->option('confidence');
-        $processed           = $this->aiService->processAIRecommendations($recommendations, $confidenceThreshold);
+        $processed = $this->aiService->processAIRecommendations($recommendations, $confidenceThreshold);
 
         $this->displayRecommendations($processed);
 
         // Ask again
-        if ($this->shouldApplyChanges($processed))
-        {
+        if ($this->shouldApplyChanges($processed)) {
             $this->applyChanges($processed);
         }
     }

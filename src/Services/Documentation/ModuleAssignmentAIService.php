@@ -13,7 +13,7 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
     public function __construct()
     {
         parent::__construct();
-        $this->parser = new DocumentationParser();
+        $this->parser = new DocumentationParser;
     }
 
     /**
@@ -21,16 +21,15 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
      */
     public function getUnassignedFilesWithDocs(): Collection
     {
-        $log             = $this->load_log();
+        $log = $this->load_log();
         $unassignedFiles = collect($log['unassigned_files'] ?? []);
 
-        return $unassignedFiles->mapWithKeys(function ($file)
-        {
+        return $unassignedFiles->mapWithKeys(function ($file) {
             return [
                 $file => [
-                    'path'          => $file,
+                    'path' => $file,
                     'has_short_doc' => $this->parser->hasShortDocumentation($file),
-                    'short_doc'     => $this->parser->getShortDocumentation($file),
+                    'short_doc' => $this->parser->getShortDocumentation($file),
                     'related_files' => $this->findRelatedFiles($file),
                 ],
             ];
@@ -58,9 +57,9 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
         $prompt = "# Module Assignment Task\n\n";
         $prompt .= "You are tasked with organizing files into modules for a healthcare platform documentation system.\n\n";
         $prompt .= "## EXISTING MODULES\n\n";
-        $prompt .= $existingModulesSection . "\n\n";
-        $prompt .= '## UNASSIGNED FILES (' . $unassignedDocs->count() . " files)\n\n";
-        $prompt .= $unassignedFilesSection . "\n\n";
+        $prompt .= $existingModulesSection."\n\n";
+        $prompt .= '## UNASSIGNED FILES ('.$unassignedDocs->count()." files)\n\n";
+        $prompt .= $unassignedFilesSection."\n\n";
         $prompt .= $this->getAssignmentInstructions();
 
         return $prompt;
@@ -74,51 +73,43 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
         $processed = [
             'assign_to_existing' => [],
             'create_new_modules' => [],
-            'low_confidence'     => [],
-            'errors'             => [],
+            'low_confidence' => [],
+            'errors' => [],
         ];
 
-        foreach ($recommendations['assignments'] ?? [] as $assignment)
-        {
+        foreach ($recommendations['assignments'] ?? [] as $assignment) {
             $confidence = $assignment['confidence'] ?? 0;
 
-            if ($confidence < $confidenceThreshold)
-            {
+            if ($confidence < $confidenceThreshold) {
                 $processed['low_confidence'][] = $assignment;
 
                 continue;
             }
 
-            if ($assignment['action'] === 'assign_to_existing')
-            {
+            if ($assignment['action'] === 'assign_to_existing') {
                 // Validate the module exists
-                if ($this->moduleExists($assignment['module']))
-                {
+                if ($this->moduleExists($assignment['module'])) {
                     $processed['assign_to_existing'][] = [
-                        'files'      => $assignment['files'],
-                        'module'     => $assignment['module'],
+                        'files' => $assignment['files'],
+                        'module' => $assignment['module'],
                         'confidence' => $confidence,
-                        'reasoning'  => $assignment['reasoning'] ?? '',
+                        'reasoning' => $assignment['reasoning'] ?? '',
                     ];
-                } else
-                {
+                } else {
                     $processed['errors'][] = "Module not found: {$assignment['module']}";
                 }
-            } elseif ($assignment['action'] === 'create_new_module')
-            {
+            } elseif ($assignment['action'] === 'create_new_module') {
                 // Validate new module data
-                if ($this->validateNewModuleData($assignment))
-                {
+                if ($this->validateNewModuleData($assignment)) {
                     $processed['create_new_modules'][] = [
-                        'name'        => $assignment['module_name'],
-                        'slug'        => $assignment['module_slug'],
+                        'name' => $assignment['module_name'],
+                        'slug' => $assignment['module_slug'],
                         'description' => $assignment['description'],
-                        'files'       => $assignment['files'],
-                        'confidence'  => $confidence,
-                        'reasoning'   => $assignment['reasoning'] ?? '',
+                        'files' => $assignment['files'],
+                        'confidence' => $confidence,
+                        'reasoning' => $assignment['reasoning'] ?? '',
                     ];
-                } else
-                {
+                } else {
                     $processed['errors'][] = "Invalid module data for: {$assignment['module_name']}";
                 }
             }
@@ -134,15 +125,13 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
     {
         $results = [
             'success' => [],
-            'failed'  => [],
+            'failed' => [],
         ];
 
-        $metadataService = new ModuleMetadataService();
+        $metadataService = new ModuleMetadataService;
 
-        foreach ($assignments as $assignment)
-        {
-            if (! $metadataService->moduleExists($assignment['module']))
-            {
+        foreach ($assignments as $assignment) {
+            if (! $metadataService->moduleExists($assignment['module'])) {
                 $results['failed'][] = [
                     'module' => $assignment['module'],
                     'reason' => 'Module not found',
@@ -151,18 +140,16 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
                 continue;
             }
 
-            try
-            {
+            try {
                 // Add files to module as undocumented (will be documented later)
                 $metadataService->addFiles($assignment['module'], $assignment['files'], false);
 
                 $results['success'][] = [
-                    'module'      => $assignment['module'],
+                    'module' => $assignment['module'],
                     'files_added' => count($assignment['files']),
-                    'files'       => $assignment['files'],
+                    'files' => $assignment['files'],
                 ];
-            } catch (Exception $e)
-            {
+            } catch (Exception $e) {
                 $results['failed'][] = [
                     'module' => $assignment['module'],
                     'reason' => $e->getMessage(),
@@ -183,18 +170,15 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
     {
         $results = [
             'success' => [],
-            'failed'  => [],
+            'failed' => [],
         ];
 
-        $metadataService = new ModuleMetadataService();
-        $updater         = new ModuleFileUpdater();
+        $metadataService = new ModuleMetadataService;
+        $updater = new ModuleFileUpdater;
 
-        foreach ($newModules as $moduleData)
-        {
-            try
-            {
-                if ($metadataService->moduleExists($moduleData['slug']))
-                {
+        foreach ($newModules as $moduleData) {
+            try {
+                if ($metadataService->moduleExists($moduleData['slug'])) {
                     $results['failed'][] = [
                         'module' => $moduleData['slug'],
                         'reason' => 'Module already exists',
@@ -205,19 +189,18 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
 
                 // Create the module with metadata and placeholder content
                 $updater->createModule([
-                    'slug'        => $moduleData['slug'],
-                    'name'        => $moduleData['name'],
+                    'slug' => $moduleData['slug'],
+                    'name' => $moduleData['name'],
                     'description' => $moduleData['description'],
-                    'files'       => $moduleData['files'],
+                    'files' => $moduleData['files'],
                 ]);
 
                 $results['success'][] = [
-                    'module'      => $moduleData['slug'],
+                    'module' => $moduleData['slug'],
                     'files_added' => count($moduleData['files']),
-                    'files'       => $moduleData['files'],
+                    'files' => $moduleData['files'],
                 ];
-            } catch (Exception $e)
-            {
+            } catch (Exception $e) {
                 $results['failed'][] = [
                     'module' => $moduleData['slug'] ?? 'unknown',
                     'reason' => $e->getMessage(),
@@ -226,8 +209,7 @@ class ModuleAssignmentAIService extends ModuleAssignmentService
         }
 
         // Update the module assignment log for successful creations
-        if (! empty($results['success']))
-        {
+        if (! empty($results['success'])) {
             $this->updateAssignmentLog($results['success']);
         }
 
@@ -270,12 +252,10 @@ EOT;
         // Group files by directory
         $filesByDirectory = [];
 
-        foreach ($moduleData['files'] as $file)
-        {
+        foreach ($moduleData['files'] as $file) {
             $dir = dirname($file);
 
-            if (! isset($filesByDirectory[$dir]))
-            {
+            if (! isset($filesByDirectory[$dir])) {
                 $filesByDirectory[$dir] = [];
             }
             $filesByDirectory[$dir][] = $file;
@@ -284,15 +264,13 @@ EOT;
         ksort($filesByDirectory);
 
         // Add grouped files
-        foreach ($filesByDirectory as $dir => $files)
-        {
+        foreach ($filesByDirectory as $dir => $files) {
             $dirTitle = $this->formatDirectoryTitle($dir);
             $content .= "\n### {$dirTitle}\n\n";
 
             sort($files);
 
-            foreach ($files as $file)
-            {
+            foreach ($files as $file) {
                 $fileName = basename($file);
                 $content .= "- **`{$file}`** - {$fileName}\n";
             }
@@ -339,34 +317,30 @@ EOT;
      */
     protected function findRelatedFiles(string $file): array
     {
-        $related   = [];
+        $related = [];
         $directory = dirname($file);
-        $basename  = basename($file, '.' . pathinfo($file, PATHINFO_EXTENSION));
+        $basename = basename($file, '.'.pathinfo($file, PATHINFO_EXTENSION));
 
         // Look for files in the same directory
         $allFiles = $this->get_all_documented_files();
 
-        foreach ($allFiles as $otherFile)
-        {
-            if ($otherFile === $file)
-            {
+        foreach ($allFiles as $otherFile) {
+            if ($otherFile === $file) {
                 continue;
             }
 
             // Same directory
-            if (dirname($otherFile) === $directory)
-            {
+            if (dirname($otherFile) === $directory) {
                 $related[] = $otherFile;
 
                 continue;
             }
 
             // Similar name pattern
-            $otherBasename = basename($otherFile, '.' . pathinfo($otherFile, PATHINFO_EXTENSION));
+            $otherBasename = basename($otherFile, '.'.pathinfo($otherFile, PATHINFO_EXTENSION));
             similar_text($basename, $otherBasename, $similarity);
 
-            if ($similarity > 70)
-            {
+            if ($similarity > 70) {
                 $related[] = $otherFile;
             }
         }
@@ -379,15 +353,13 @@ EOT;
      */
     protected function formatExistingModules(Collection $moduleSummaries): string
     {
-        $metadataService = new ModuleMetadataService();
-        $output          = '';
+        $metadataService = new ModuleMetadataService;
+        $output = '';
 
-        foreach ($moduleSummaries as $slug => $summary)
-        {
+        foreach ($moduleSummaries as $slug => $summary) {
             $metadata = $metadataService->loadMetadata($slug);
 
-            if ($metadata)
-            {
+            if ($metadata) {
                 $output .= "### Module: {$slug}\n";
                 $output .= "**Name:** {$metadata['module_name']}\n";
 
@@ -395,19 +367,16 @@ EOT;
                 $summaryText = (! empty($metadata['module_summary'])) ? $metadata['module_summary'] : $summary;
 
                 // Only show summary if we have one
-                if (! empty($summaryText))
-                {
+                if (! empty($summaryText)) {
                     $output .= "**Summary:** {$summaryText}\n";
-                } else
-                {
+                } else {
                     $output .= "**Summary:** *Documentation not yet generated for this module*\n";
                 }
 
                 // Add file count for context
                 $totalFiles = $metadata['statistics']['total_files'] ?? 0;
                 $output .= "**Files:** {$totalFiles} files\n\n";
-            } else
-            {
+            } else {
                 // Fallback if metadata not found
                 $output .= "### Module: {$slug}\n\n{$summary}\n\n";
             }
@@ -423,21 +392,17 @@ EOT;
      */
     protected function formatUnassignedFiles(Collection $unassignedDocs): string
     {
-        return $unassignedDocs->map(function ($fileData, $path)
-        {
+        return $unassignedDocs->map(function ($fileData, $path) {
             $output = "### File: {$path}\n\n";
 
-            if ($fileData['short_doc'])
-            {
+            if ($fileData['short_doc']) {
                 $output .= $fileData['short_doc'];
-            } else
-            {
+            } else {
                 $output .= '*No short documentation available*';
             }
 
-            if (! empty($fileData['related_files']))
-            {
-                $output .= "\n\nRelated files: " . implode(', ', $fileData['related_files']);
+            if (! empty($fileData['related_files'])) {
+                $output .= "\n\nRelated files: ".implode(', ', $fileData['related_files']);
             }
 
             return $output;
@@ -525,7 +490,7 @@ EOT;
      */
     protected function moduleExists(string $slug): bool
     {
-        $metadataService = new ModuleMetadataService();
+        $metadataService = new ModuleMetadataService;
 
         return $metadataService->moduleExists($slug);
     }
@@ -537,17 +502,14 @@ EOT;
     {
         $required = ['module_name', 'module_slug', 'description', 'files'];
 
-        foreach ($required as $field)
-        {
-            if (empty($data[$field]))
-            {
+        foreach ($required as $field) {
+            if (empty($data[$field])) {
                 return false;
             }
         }
 
         // Validate slug format
-        if (! preg_match('/^[a-z0-9-]+$/', $data['module_slug']))
-        {
+        if (! preg_match('/^[a-z0-9-]+$/', $data['module_slug'])) {
             return false;
         }
 
@@ -573,10 +535,8 @@ EOT;
         );
 
         // Update assigned files section
-        foreach ($successfulAssignments as $assignment)
-        {
-            if (! isset($log['assigned_files'][$assignment['module']]))
-            {
+        foreach ($successfulAssignments as $assignment) {
+            if (! isset($log['assigned_files'][$assignment['module']])) {
                 $log['assigned_files'][$assignment['module']] = [];
             }
 

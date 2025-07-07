@@ -2,9 +2,9 @@
 
 namespace Lumiio\CascadeDocs\Commands\Documentation;
 
+use Illuminate\Console\Command;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateModuleDocumentationJob;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
-use Illuminate\Console\Command;
 
 class UpdateAllModuleDocumentationCommand extends Command
 {
@@ -13,30 +13,30 @@ class UpdateAllModuleDocumentationCommand extends Command
                             {--model=o3 : The AI model to use for generation}
                             {--dry-run : Show what would be updated without making changes}
                             {--limit=0 : Maximum number of modules to process (0 = all)}';
+
     protected $description = 'Update documentation for all modules that have undocumented files';
+
     protected ModuleMetadataService $metadataService;
 
     public function __construct()
     {
         parent::__construct();
-        $this->metadataService = new ModuleMetadataService();
+        $this->metadataService = new ModuleMetadataService;
     }
 
     public function handle(): int
     {
         $moduleSlug = $this->option('module');
-        $model      = $this->option('model');
-        $dryRun     = $this->option('dry-run');
+        $model = $this->option('model');
+        $dryRun = $this->option('dry-run');
 
         $this->info('Starting module documentation update process...');
 
-        if ($moduleSlug)
-        {
+        if ($moduleSlug) {
             // Update specific module
             $result = $this->processModule($moduleSlug, $model, $dryRun);
 
-            if (! $result)
-            {
+            if (! $result) {
                 $this->error("Module not found: {$moduleSlug}");
 
                 return 1;
@@ -52,22 +52,19 @@ class UpdateAllModuleDocumentationCommand extends Command
         $modulesToUpdate = collect();
 
         // Check which modules have undocumented files
-        foreach ($modules as $slug)
-        {
+        foreach ($modules as $slug) {
             $metadata = $this->metadataService->loadMetadata($slug);
 
-            if ($metadata && ! empty($metadata['undocumented_files']))
-            {
+            if ($metadata && ! empty($metadata['undocumented_files'])) {
                 $modulesToUpdate->push([
-                    'slug'               => $slug,
-                    'name'               => $metadata['module_name'],
+                    'slug' => $slug,
+                    'name' => $metadata['module_name'],
                     'undocumented_count' => count($metadata['undocumented_files']),
                 ]);
             }
         }
 
-        if ($modulesToUpdate->isEmpty())
-        {
+        if ($modulesToUpdate->isEmpty()) {
             $this->info('No modules have undocumented files. All documentation is up to date!');
 
             return 0;
@@ -76,8 +73,7 @@ class UpdateAllModuleDocumentationCommand extends Command
         // Apply limit if specified
         $limit = (int) $this->option('limit');
 
-        if ($limit > 0 && $modulesToUpdate->count() > $limit)
-        {
+        if ($limit > 0 && $modulesToUpdate->count() > $limit) {
             $modulesToUpdate = $modulesToUpdate->take($limit);
             $this->info("Limiting to {$limit} modules as requested.");
         }
@@ -85,8 +81,7 @@ class UpdateAllModuleDocumentationCommand extends Command
         $this->info("Found {$modulesToUpdate->count()} modules with undocumented files:");
         $this->table(
             ['Module', 'Name', 'Undocumented Files'],
-            $modulesToUpdate->map(function ($module)
-            {
+            $modulesToUpdate->map(function ($module) {
                 return [
                     $module['slug'],
                     $module['name'],
@@ -95,15 +90,13 @@ class UpdateAllModuleDocumentationCommand extends Command
             })
         );
 
-        if ($dryRun)
-        {
+        if ($dryRun) {
             $this->info("\nDry run mode - no changes will be made.");
 
             return 0;
         }
 
-        if (! $this->confirm('Do you want to update documentation for these modules?'))
-        {
+        if (! $this->confirm('Do you want to update documentation for these modules?')) {
             $this->info('Update cancelled.');
 
             return 0;
@@ -116,8 +109,7 @@ class UpdateAllModuleDocumentationCommand extends Command
         $bar = $this->output->createProgressBar($modulesToUpdate->count());
         $bar->start();
 
-        foreach ($modulesToUpdate as $module)
-        {
+        foreach ($modulesToUpdate as $module) {
             UpdateModuleDocumentationJob::dispatch(
                 $module['slug'],
                 $gitSha,
@@ -141,15 +133,13 @@ class UpdateAllModuleDocumentationCommand extends Command
     {
         $metadata = $this->metadataService->loadMetadata($moduleSlug);
 
-        if (! $metadata)
-        {
+        if (! $metadata) {
             return false;
         }
 
         $undocumentedCount = count($metadata['undocumented_files'] ?? []);
 
-        if ($undocumentedCount === 0)
-        {
+        if ($undocumentedCount === 0) {
             $this->info("Module '{$moduleSlug}' has no undocumented files.");
 
             return true;
@@ -158,13 +148,11 @@ class UpdateAllModuleDocumentationCommand extends Command
         $this->info("Module: {$metadata['module_name']}");
         $this->info("Undocumented files: {$undocumentedCount}");
 
-        if ($dryRun)
-        {
+        if ($dryRun) {
             $this->info("Would update documentation for module: {$moduleSlug}");
             $this->info('Files to document:');
 
-            foreach ($metadata['undocumented_files'] as $file)
-            {
+            foreach ($metadata['undocumented_files'] as $file) {
                 $this->line("  - {$file}");
             }
 

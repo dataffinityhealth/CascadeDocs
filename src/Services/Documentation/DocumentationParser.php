@@ -14,46 +14,39 @@ class DocumentationParser
      */
     public function extractModuleSummary(string $modulePath): string
     {
-        if (! File::exists($modulePath))
-        {
+        if (! File::exists($modulePath)) {
             throw new Exception("Module file not found: {$modulePath}");
         }
 
         $content = File::get($modulePath);
 
         // Find all occurrences of "---"
-        $lines         = explode("\n", $content);
+        $lines = explode("\n", $content);
         $dashPositions = [];
 
-        foreach ($lines as $index => $line)
-        {
-            if (trim($line) === '---')
-            {
+        foreach ($lines as $index => $line) {
+            if (trim($line) === '---') {
                 $dashPositions[] = $index;
             }
         }
 
-        if (count($dashPositions) < 2)
-        {
+        if (count($dashPositions) < 2) {
             throw new Exception("Invalid module format - requires at least 2 '---' markers");
         }
 
         // Find the line containing "## How This Module Works"
         $startLine = $dashPositions[1] + 1;
-        $endLine   = null;
+        $endLine = null;
 
-        for ($i = $startLine; $i < count($lines); $i++)
-        {
-            if (str_starts_with(trim($lines[$i]), '## How This Module Works'))
-            {
+        for ($i = $startLine; $i < count($lines); $i++) {
+            if (str_starts_with(trim($lines[$i]), '## How This Module Works')) {
                 $endLine = $i;
 
                 break;
             }
         }
 
-        if ($endLine === null)
-        {
+        if ($endLine === null) {
             throw new Exception("Could not find '## How This Module Works' section");
         }
 
@@ -71,29 +64,25 @@ class DocumentationParser
     {
         $contentPath = base_path(config('cascadedocs.paths.modules.content'));
 
-        if (! File::exists($contentPath))
-        {
+        if (! File::exists($contentPath)) {
             return collect();
         }
 
         return collect(File::files($contentPath))
             ->filter(fn ($file) => $file->getExtension() === 'md')
-            ->mapWithKeys(function ($file)
-            {
-                try
-                {
-                    $slug    = $file->getFilenameWithoutExtension();
+            ->mapWithKeys(function ($file) {
+                try {
+                    $slug = $file->getFilenameWithoutExtension();
                     $content = File::get($file->getPathname());
 
                     // Extract overview section from content
                     $summary = $this->extractOverviewFromContent($content);
 
                     return [$slug => $summary];
-                } catch (Exception $e)
-                {
+                } catch (Exception $e) {
                     // Log error and skip this module
                     logger()->warning('Failed to extract module summary', [
-                        'file'  => $file->getPathname(),
+                        'file' => $file->getPathname(),
                         'error' => $e->getMessage(),
                     ]);
 
@@ -109,8 +98,7 @@ class DocumentationParser
     {
         $shortDocPath = $this->convertToShortDocPath($filePath);
 
-        if (! File::exists($shortDocPath))
-        {
+        if (! File::exists($shortDocPath)) {
             return null;
         }
 
@@ -122,8 +110,7 @@ class DocumentationParser
      */
     public function getShortDocumentationBatch(array $filePaths): Collection
     {
-        return collect($filePaths)->mapWithKeys(function ($filePath)
-        {
+        return collect($filePaths)->mapWithKeys(function ($filePath) {
             $shortDoc = $this->getShortDocumentation($filePath);
 
             return [$filePath => $shortDoc];
@@ -136,13 +123,14 @@ class DocumentationParser
     private function convertToShortDocPath(string $filePath): string
     {
         // Remove base path if present
-        $relativePath = str_replace(base_path() . '/', '', $filePath);
+        $relativePath = str_replace(base_path().'/', '', $filePath);
 
         // Replace file extensions with .md
         $docPath = preg_replace('/\.(php|js|vue|jsx|ts|tsx)$/', '.md', $relativePath);
 
         $outputPath = config('cascadedocs.paths.output');
         $tierDir = config('cascadedocs.tiers.micro', 'short');
+
         return base_path("{$outputPath}{$tierDir}/{$docPath}");
     }
 
@@ -161,24 +149,20 @@ class DocumentationParser
      */
     public function extractModuleMetadata(string $modulePath): array
     {
-        if (! File::exists($modulePath))
-        {
+        if (! File::exists($modulePath)) {
             return [];
         }
 
         $content = File::get($modulePath);
 
         // Extract front matter between first two "---"
-        if (preg_match('/^---\n(.*?)\n---/s', $content, $matches))
-        {
+        if (preg_match('/^---\n(.*?)\n---/s', $content, $matches)) {
             $frontMatter = $matches[1];
-            $metadata    = [];
+            $metadata = [];
 
-            foreach (explode("\n", $frontMatter) as $line)
-            {
-                if (str_contains($line, ':'))
-                {
-                    [$key, $value]        = explode(':', $line, 2);
+            foreach (explode("\n", $frontMatter) as $line) {
+                if (str_contains($line, ':')) {
+                    [$key, $value] = explode(':', $line, 2);
                     $metadata[trim($key)] = trim($value);
                 }
             }
@@ -195,14 +179,12 @@ class DocumentationParser
     protected function extractOverviewFromContent(string $content): string
     {
         // Look for ## Overview section
-        if (preg_match('/^## Overview\s*\n\n(.+?)(?=\n##|\z)/sm', $content, $matches))
-        {
+        if (preg_match('/^## Overview\s*\n\n(.+?)(?=\n##|\z)/sm', $content, $matches)) {
             return trim($matches[1]);
         }
 
         // If no overview section, return first paragraph after title
-        if (preg_match('/^# .+?\n\n(.+?)(?=\n##|\z)/sm', $content, $matches))
-        {
+        if (preg_match('/^# .+?\n\n(.+?)(?=\n##|\z)/sm', $content, $matches)) {
             return trim($matches[1]);
         }
 
