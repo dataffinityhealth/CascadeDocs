@@ -12,7 +12,7 @@ return [
     'paths' => [
         'source' => env('CASCADEDOCS_SOURCE_PATHS', ['app/', 'resources/js/']),
         'output' => env('CASCADEDOCS_OUTPUT_PATH', 'docs/source_documents/'),
-        'logs' => env('CASCADEDOCS_LOGS_PATH', 'docs/'),
+        'logs' => env('CASCADEDOCS_LOGS_PATH', 'docs/cascadedocs_logs/'),
         'modules' => [
             'content' => env('CASCADEDOCS_MODULE_CONTENT_PATH', 'docs/source_documents/modules/content/'),
             'metadata' => env('CASCADEDOCS_MODULE_METADATA_PATH', 'docs/source_documents/modules/metadata/'),
@@ -39,9 +39,9 @@ return [
     */
     'ai' => [
         'default_provider' => env('CASCADEDOCS_AI_PROVIDER', 'openai'),
-        'default_model' => env('CASCADEDOCS_AI_MODEL', 'gpt-4'),
-        'temperature' => env('CASCADEDOCS_AI_TEMPERATURE', 0.7),
-        'max_tokens' => env('CASCADEDOCS_AI_MAX_TOKENS', 4000),
+        'default_model' => env('CASCADEDOCS_AI_MODEL', 'gpt-o3'),
+        'temperature' => env('CASCADEDOCS_AI_TEMPERATURE', 0.3),
+        'max_tokens' => env('CASCADEDOCS_AI_MAX_TOKENS', 25000),
     ],
 
     /*
