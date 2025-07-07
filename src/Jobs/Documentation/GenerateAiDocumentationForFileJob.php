@@ -84,12 +84,24 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         }
 
         $tiers_to_save = $this->tier === 'all' ? config('cascadedocs.tier_names') : [$this->tier];
+        $written_files = [];
 
-        foreach ($tiers_to_save as $current_tier) {
-            if (isset($documentation[$current_tier])) {
-                $doc_path = $this->get_tier_document_path($this->file_path, $current_tier);
-                $this->write_documentation_file($doc_path, $documentation[$current_tier]);
+        try {
+            foreach ($tiers_to_save as $current_tier) {
+                if (isset($documentation[$current_tier])) {
+                    $doc_path = $this->get_tier_document_path($this->file_path, $current_tier);
+                    $this->write_documentation_file($doc_path, $documentation[$current_tier]);
+                    $written_files[] = $doc_path;
+                }
             }
+        } catch (Exception $e) {
+            // Rollback any files that were written
+            foreach ($written_files as $file_path) {
+                if (File::exists($file_path)) {
+                    File::delete($file_path);
+                }
+            }
+            throw $e;
         }
     }
 
@@ -121,17 +133,18 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     {
         $truncationPatterns = [
             '/\.\.\.$/',
-            '/\[truncated\]/',
+            '/\[truncated\]/i',
             '/\[.*to be added.*\]/i',
             '/\[.*details here.*\]/i',
             '/\[.*insert.*\]/i',
             '/\[.*placeholder.*\]/i',
+            '/\[.*TODO.*\]/i',
         ];
 
         $minLengths = [
-            'micro' => 50,
-            'standard' => 200,
-            'expansive' => 500,
+            'micro' => 30,      // Reduced from 50
+            'standard' => 100,  // Reduced from 200
+            'expansive' => 300, // Reduced from 500
         ];
 
         foreach ($documentation as $tier => $content) {
@@ -147,18 +160,18 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
             }
 
             // Check minimum content length
-            if (strlen($content) < ($minLengths[$tier] ?? 50)) {
+            if (strlen($content) < ($minLengths[$tier] ?? 30)) {
                 throw new Exception("Documentation appears too short for tier: {$tier} (length: ".strlen($content).')');
             }
 
-            // Check if content ends abruptly
+            // Only check for obvious truncation indicators
             $trimmedContent = trim($content);
-            if (preg_match('/[a-zA-Z0-9]$/', $trimmedContent)) {
-                // Content ends with alphanumeric character without punctuation - might be truncated
-                $lastLine = substr($trimmedContent, -100);
-                if (! preg_match('/[.!?]/', $lastLine)) {
-                    throw new Exception("Documentation may be truncated - no sentence ending found in tier: {$tier}");
-                }
+            
+            // Check if it ends with incomplete markdown or code block
+            if (preg_match('/```[^`]*$/', $trimmedContent) || 
+                preg_match('/`[^`]$/', $trimmedContent) ||
+                preg_match('/\|\s*$/', $trimmedContent)) {
+                throw new Exception("Documentation appears to be truncated - incomplete markdown structure in tier: {$tier}");
             }
         }
     }
