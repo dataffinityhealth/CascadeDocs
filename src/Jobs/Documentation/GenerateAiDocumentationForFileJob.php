@@ -173,26 +173,26 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
 
             // Get the path for the existing documentation
             $existingDocPath = $this->get_tier_document_path($this->file_path, $tier);
-            
+
             // Check if existing documentation exists
             if (File::exists($existingDocPath)) {
                 $existingContent = File::get($existingDocPath);
                 $existingLength = strlen($existingContent);
                 $newLength = strlen($newContent);
-                
+
                 // Calculate the percentage difference
                 if ($existingLength > 0) {
                     $percentageReduction = ($existingLength - $newLength) / $existingLength;
-                    
+
                     if ($percentageReduction > $threshold) {
                         $warnings[] = sprintf(
-                            "Tier %s documentation is %.1f%% shorter than existing (was %d chars, now %d chars)",
+                            'Tier %s documentation is %.1f%% shorter than existing (was %d chars, now %d chars)',
                             $tier,
                             $percentageReduction * 100,
                             $existingLength,
                             $newLength
                         );
-                        
+
                         Log::warning('CascadeDocs: New documentation is significantly shorter', [
                             'file' => $this->file_path,
                             'tier' => $tier,
