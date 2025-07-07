@@ -1,0 +1,593 @@
+<?php
+
+namespace Lumiio\CascadeDocs\Services\Documentation;
+
+use Exception;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
+
+class ModuleAssignmentAIService extends ModuleAssignmentService
+{
+    protected DocumentationParser $parser;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->parser = new DocumentationParser();
+    }
+
+    /**
+     * Get unassigned files with their short documentation.
+     */
+    public function getUnassignedFilesWithDocs(): Collection
+    {
+        $log             = $this->load_log();
+        $unassignedFiles = collect($log['unassigned_files'] ?? []);
+
+        return $unassignedFiles->mapWithKeys(function ($file)
+        {
+            return [
+                $file => [
+                    'path'          => $file,
+                    'has_short_doc' => $this->parser->hasShortDocumentation($file),
+                    'short_doc'     => $this->parser->getShortDocumentation($file),
+                    'related_files' => $this->findRelatedFiles($file),
+                ],
+            ];
+        });
+    }
+
+    /**
+     * Extract summaries from all module files.
+     */
+    public function extractModuleSummaries(): Collection
+    {
+        return $this->parser->extractAllModuleSummaries();
+    }
+
+    /**
+     * Build the prompt for AI module assignment.
+     */
+    public function buildModuleAssignmentPrompt(Collection $unassignedDocs, Collection $moduleSummaries): string
+    {
+        // Build the context sections
+        $existingModulesSection = $this->formatExistingModules($moduleSummaries);
+        $unassignedFilesSection = $this->formatUnassignedFiles($unassignedDocs);
+
+        // Build the complete prompt
+        $prompt = "# Module Assignment Task\n\n";
+        $prompt .= "You are tasked with organizing files into modules for a healthcare platform documentation system.\n\n";
+        $prompt .= "## EXISTING MODULES\n\n";
+        $prompt .= $existingModulesSection . "\n\n";
+        $prompt .= '## UNASSIGNED FILES (' . $unassignedDocs->count() . " files)\n\n";
+        $prompt .= $unassignedFilesSection . "\n\n";
+        $prompt .= $this->getAssignmentInstructions();
+
+        return $prompt;
+    }
+
+    /**
+     * Process AI recommendations and prepare for application.
+     */
+    public function processAIRecommendations(array $recommendations, float $confidenceThreshold = 0.7): array
+    {
+        $processed = [
+            'assign_to_existing' => [],
+            'create_new_modules' => [],
+            'low_confidence'     => [],
+            'errors'             => [],
+        ];
+
+        foreach ($recommendations['assignments'] ?? [] as $assignment)
+        {
+            $confidence = $assignment['confidence'] ?? 0;
+
+            if ($confidence < $confidenceThreshold)
+            {
+                $processed['low_confidence'][] = $assignment;
+
+                continue;
+            }
+
+            if ($assignment['action'] === 'assign_to_existing')
+            {
+                // Validate the module exists
+                if ($this->moduleExists($assignment['module']))
+                {
+                    $processed['assign_to_existing'][] = [
+                        'files'      => $assignment['files'],
+                        'module'     => $assignment['module'],
+                        'confidence' => $confidence,
+                        'reasoning'  => $assignment['reasoning'] ?? '',
+                    ];
+                } else
+                {
+                    $processed['errors'][] = "Module not found: {$assignment['module']}";
+                }
+            } elseif ($assignment['action'] === 'create_new_module')
+            {
+                // Validate new module data
+                if ($this->validateNewModuleData($assignment))
+                {
+                    $processed['create_new_modules'][] = [
+                        'name'        => $assignment['module_name'],
+                        'slug'        => $assignment['module_slug'],
+                        'description' => $assignment['description'],
+                        'files'       => $assignment['files'],
+                        'confidence'  => $confidence,
+                        'reasoning'   => $assignment['reasoning'] ?? '',
+                    ];
+                } else
+                {
+                    $processed['errors'][] = "Invalid module data for: {$assignment['module_name']}";
+                }
+            }
+        }
+
+        return $processed;
+    }
+
+    /**
+     * Apply module assignments to existing modules.
+     */
+    public function applyModuleAssignments(array $assignments): array
+    {
+        $results = [
+            'success' => [],
+            'failed'  => [],
+        ];
+
+        $metadataService = new ModuleMetadataService();
+
+        foreach ($assignments as $assignment)
+        {
+            if (! $metadataService->moduleExists($assignment['module']))
+            {
+                $results['failed'][] = [
+                    'module' => $assignment['module'],
+                    'reason' => 'Module not found',
+                ];
+
+                continue;
+            }
+
+            try
+            {
+                // Add files to module as undocumented (will be documented later)
+                $metadataService->addFiles($assignment['module'], $assignment['files'], false);
+
+                $results['success'][] = [
+                    'module'      => $assignment['module'],
+                    'files_added' => count($assignment['files']),
+                    'files'       => $assignment['files'],
+                ];
+            } catch (Exception $e)
+            {
+                $results['failed'][] = [
+                    'module' => $assignment['module'],
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // Update the module assignment log
+        $this->updateAssignmentLog($results['success']);
+
+        return $results;
+    }
+
+    /**
+     * Create new modules based on AI recommendations.
+     */
+    public function createNewModules(array $newModules): array
+    {
+        $results = [
+            'success' => [],
+            'failed'  => [],
+        ];
+
+        $metadataService = new ModuleMetadataService();
+        $updater         = new ModuleFileUpdater();
+
+        foreach ($newModules as $moduleData)
+        {
+            try
+            {
+                if ($metadataService->moduleExists($moduleData['slug']))
+                {
+                    $results['failed'][] = [
+                        'module' => $moduleData['slug'],
+                        'reason' => 'Module already exists',
+                    ];
+
+                    continue;
+                }
+
+                // Create the module with metadata and placeholder content
+                $updater->createModule([
+                    'slug'        => $moduleData['slug'],
+                    'name'        => $moduleData['name'],
+                    'description' => $moduleData['description'],
+                    'files'       => $moduleData['files'],
+                ]);
+
+                $results['success'][] = [
+                    'module'      => $moduleData['slug'],
+                    'files_added' => count($moduleData['files']),
+                    'files'       => $moduleData['files'],
+                ];
+            } catch (Exception $e)
+            {
+                $results['failed'][] = [
+                    'module' => $moduleData['slug'] ?? 'unknown',
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // Update the module assignment log for successful creations
+        if (! empty($results['success']))
+        {
+            $this->updateAssignmentLog($results['success']);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Generate content for a new module.
+     */
+    protected function generateNewModuleContent(array $moduleData): string
+    {
+        $timestamp = now()->toIso8601String();
+        $fileCount = count($moduleData['files']);
+        $gitCommit = trim(shell_exec('git rev-parse HEAD') ?? 'unknown');
+
+        $content = <<<EOT
+---
+doc_version: 1.0
+doc_tier: module
+module_name: {$moduleData['name']}
+module_slug: {$moduleData['slug']}
+generated_at: {$timestamp}
+git_commit_sha: {$gitCommit}
+total_files: {$fileCount}
+last_updated: {$timestamp}
+---
+
+# {$moduleData['name']} Module
+
+## Overview
+
+{$moduleData['description']}
+
+## How This Module Works
+
+### Core Components
+
+EOT;
+
+        // Group files by directory
+        $filesByDirectory = [];
+
+        foreach ($moduleData['files'] as $file)
+        {
+            $dir = dirname($file);
+
+            if (! isset($filesByDirectory[$dir]))
+            {
+                $filesByDirectory[$dir] = [];
+            }
+            $filesByDirectory[$dir][] = $file;
+        }
+
+        ksort($filesByDirectory);
+
+        // Add grouped files
+        foreach ($filesByDirectory as $dir => $files)
+        {
+            $dirTitle = $this->formatDirectoryTitle($dir);
+            $content .= "\n### {$dirTitle}\n\n";
+
+            sort($files);
+
+            foreach ($files as $file)
+            {
+                $fileName = basename($file);
+                $content .= "- **`{$file}`** - {$fileName}\n";
+            }
+        }
+
+        $content .= <<<'EOT'
+
+## Module Files
+
+See the files listed above organized by directory.
+
+## Key Workflows Explained
+
+[To be documented]
+
+## Integration Points
+
+### Dependencies (This module requires)
+
+[To be documented]
+
+### Dependents (Modules that require this)
+
+[To be documented]
+
+## Security Considerations
+
+[To be documented]
+
+## Future Considerations
+
+[To be documented]
+
+## Related Documentation
+
+[To be documented]
+EOT;
+
+        return $content;
+    }
+
+    /**
+     * Find files related to a given file.
+     */
+    protected function findRelatedFiles(string $file): array
+    {
+        $related   = [];
+        $directory = dirname($file);
+        $basename  = basename($file, '.' . pathinfo($file, PATHINFO_EXTENSION));
+
+        // Look for files in the same directory
+        $allFiles = $this->get_all_documented_files();
+
+        foreach ($allFiles as $otherFile)
+        {
+            if ($otherFile === $file)
+            {
+                continue;
+            }
+
+            // Same directory
+            if (dirname($otherFile) === $directory)
+            {
+                $related[] = $otherFile;
+
+                continue;
+            }
+
+            // Similar name pattern
+            $otherBasename = basename($otherFile, '.' . pathinfo($otherFile, PATHINFO_EXTENSION));
+            similar_text($basename, $otherBasename, $similarity);
+
+            if ($similarity > 70)
+            {
+                $related[] = $otherFile;
+            }
+        }
+
+        return array_slice($related, 0, 5); // Limit to 5 related files
+    }
+
+    /**
+     * Format existing modules for the prompt.
+     */
+    protected function formatExistingModules(Collection $moduleSummaries): string
+    {
+        $metadataService = new ModuleMetadataService();
+        $output          = '';
+
+        foreach ($moduleSummaries as $slug => $summary)
+        {
+            $metadata = $metadataService->loadMetadata($slug);
+
+            if ($metadata)
+            {
+                $output .= "### Module: {$slug}\n";
+                $output .= "**Name:** {$metadata['module_name']}\n";
+
+                // Use module_summary from metadata if available and not empty
+                $summaryText = (! empty($metadata['module_summary'])) ? $metadata['module_summary'] : $summary;
+
+                // Only show summary if we have one
+                if (! empty($summaryText))
+                {
+                    $output .= "**Summary:** {$summaryText}\n";
+                } else
+                {
+                    $output .= "**Summary:** *Documentation not yet generated for this module*\n";
+                }
+
+                // Add file count for context
+                $totalFiles = $metadata['statistics']['total_files'] ?? 0;
+                $output .= "**Files:** {$totalFiles} files\n\n";
+            } else
+            {
+                // Fallback if metadata not found
+                $output .= "### Module: {$slug}\n\n{$summary}\n\n";
+            }
+
+            $output .= "---\n\n";
+        }
+
+        return rtrim($output, "\n---\n\n");
+    }
+
+    /**
+     * Format unassigned files for the prompt.
+     */
+    protected function formatUnassignedFiles(Collection $unassignedDocs): string
+    {
+        return $unassignedDocs->map(function ($fileData, $path)
+        {
+            $output = "### File: {$path}\n\n";
+
+            if ($fileData['short_doc'])
+            {
+                $output .= $fileData['short_doc'];
+            } else
+            {
+                $output .= '*No short documentation available*';
+            }
+
+            if (! empty($fileData['related_files']))
+            {
+                $output .= "\n\nRelated files: " . implode(', ', $fileData['related_files']);
+            }
+
+            return $output;
+        })->implode("\n\n---\n\n");
+    }
+
+    /**
+     * Get assignment instructions for the AI.
+     */
+    protected function getAssignmentInstructions(): string
+    {
+        return <<<'EOT'
+## INSTRUCTIONS
+
+Analyze ALL unassigned files and organize them in two phases:
+
+PHASE 1 - Assign to existing modules:
+- Review each unassigned file and check if it naturally belongs to any EXISTING module
+- Only assign files that are clearly related to the module's purpose
+- Use high confidence scores (0.8+) for obvious matches
+
+PHASE 2 - Create new module suggestions:
+- From the remaining unassigned files, identify natural groupings that could form NEW modules
+- Look for files that share common functionality, purpose, or domain
+- Group related components (e.g., Livewire components, controllers, services, models)
+- Each new module must have at least 3 related files
+
+IMPORTANT: Process ALL files in the batch - either assign them to existing modules OR group them into new module suggestions. Aim to minimize unprocessed files.
+
+Return your response as a JSON object with the following structure:
+
+{
+    "assignments": [
+        {
+            "action": "assign_to_existing",
+            "files": ["path/to/file1.php", "path/to/file2.php"],
+            "module": "existing-module-slug",
+            "confidence": 0.85,
+            "reasoning": "These files handle similar functionality..."
+        },
+        {
+            "action": "create_new_module",
+            "files": ["path/to/file3.php", "path/to/file4.php", "path/to/file5.php"],
+            "module_name": "New Module Name",
+            "module_slug": "new-module-slug",
+            "description": "This module handles [specific functionality]. It includes [key components] and provides [main features].",
+            "confidence": 0.9,
+            "reasoning": "These files form a cohesive unit for..."
+        }
+    ]
+}
+
+Guidelines:
+- For "assign_to_existing": ONLY use module slugs that appear in the EXISTING MODULES section
+- For "create_new_module": Provide all required fields (module_name, module_slug, description, files)
+- Only suggest assignments with confidence >= 0.7
+- New modules must have at least 3 related files
+- Module slugs should be lowercase with hyphens (e.g., "user-management")
+- Descriptions should be comprehensive (2-3 sentences minimum)
+- Group files by shared functionality, not just by directory
+- Consider the actual purpose and functionality when grouping
+
+Common existing module slugs you might use:
+- age-of-majority, api-services, assent-handling, audit-logging, authentication
+- badge-system, charts-visualization, clinic-admin, clinic-registration, clinical-trials
+- clinician-management, community-polls, consent-forms, consent-process, content-management
+- database-management, dataset-polls, documentation, email-campaigns, email-system
+- external-apis, file-management, genetic-testing, health-diary, hipaa-compliance
+- historical-records, job-management, medical-data-export, medical-records
+- password-security, patient-activity, patient-analytics, patient-delegates
+- patient-invitations, patient-messaging, patient-profile, patient-registration
+- patient-withdrawal, pii-protection, questionnaire-builder, questionnaire-dependencies
+- questionnaire-scheduling, questionnaire-versioning, redcap-import, report-builder
+- research-export, roles-permissions, search-filters, statistical-analysis
+- system-configuration, system-security, translation-management, trial-matching
+- two-factor-auth, unit-translation, wearable-integration
+
+IMPORTANT: Return ONLY valid JSON. Do not include markdown code blocks or any other text.
+
+EOT;
+    }
+
+    /**
+     * Check if a module exists.
+     */
+    protected function moduleExists(string $slug): bool
+    {
+        $metadataService = new ModuleMetadataService();
+
+        return $metadataService->moduleExists($slug);
+    }
+
+    /**
+     * Validate new module data.
+     */
+    protected function validateNewModuleData(array $data): bool
+    {
+        $required = ['module_name', 'module_slug', 'description', 'files'];
+
+        foreach ($required as $field)
+        {
+            if (empty($data[$field]))
+            {
+                return false;
+            }
+        }
+
+        // Validate slug format
+        if (! preg_match('/^[a-z0-9-]+$/', $data['module_slug']))
+        {
+            return false;
+        }
+
+        // Validate minimum files
+        return ! (count($data['files']) < 3);
+    }
+
+    /**
+     * Update the assignment log after successful assignments.
+     */
+    protected function updateAssignmentLog(array $successfulAssignments): void
+    {
+        $log = $this->load_log();
+
+        // Remove assigned files from unassigned list
+        $assignedFiles = collect($successfulAssignments)
+            ->pluck('files')
+            ->flatten()
+            ->toArray();
+
+        $log['unassigned_files'] = array_values(
+            array_diff($log['unassigned_files'], $assignedFiles)
+        );
+
+        // Update assigned files section
+        foreach ($successfulAssignments as $assignment)
+        {
+            if (! isset($log['assigned_files'][$assignment['module']]))
+            {
+                $log['assigned_files'][$assignment['module']] = [];
+            }
+
+            $log['assigned_files'][$assignment['module']] = array_merge(
+                $log['assigned_files'][$assignment['module']],
+                $assignment['files']
+            );
+        }
+
+        $log['last_ai_assignment'] = now()->toIso8601String();
+
+        $this->save_log($log);
+    }
+}
