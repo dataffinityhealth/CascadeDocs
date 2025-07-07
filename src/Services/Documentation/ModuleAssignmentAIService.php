@@ -313,6 +313,20 @@ EOT;
     }
 
     /**
+     * Format directory name for display.
+     */
+    protected function formatDirectoryTitle(string $directory): string
+    {
+        // Convert path to title case and replace slashes with arrows
+        $parts = explode('/', $directory);
+        $formatted = array_map(function ($part) {
+            return ucwords(str_replace(['-', '_'], ' ', $part));
+        }, $parts);
+
+        return implode(' → ', $formatted);
+    }
+
+    /**
      * Find files related to a given file.
      */
     protected function findRelatedFiles(string $file): array
@@ -393,16 +407,22 @@ EOT;
     protected function formatUnassignedFiles(Collection $unassignedDocs): string
     {
         return $unassignedDocs->map(function ($fileData, $path) {
-            $output = "### File: {$path}\n\n";
+            $output = "### File: {$path}\n";
+
+            // Extract directory and filename for clarity
+            $directory = dirname($path);
+            $filename = basename($path);
+            $output .= "**Directory:** {$directory}\n";
+            $output .= "**Filename:** {$filename}\n\n";
 
             if ($fileData['short_doc']) {
-                $output .= $fileData['short_doc'];
+                $output .= "**Documentation:**\n{$fileData['short_doc']}";
             } else {
-                $output .= '*No short documentation available*';
+                $output .= '**Documentation:** *No short documentation available*';
             }
 
             if (! empty($fileData['related_files'])) {
-                $output .= "\n\nRelated files: ".implode(', ', $fileData['related_files']);
+                $output .= "\n\n**Related files:** ".implode(', ', $fileData['related_files']);
             }
 
             return $output;
@@ -421,16 +441,25 @@ Analyze ALL unassigned files and organize them in two phases:
 
 PHASE 1 - Assign to existing modules:
 - Review each unassigned file and check if it naturally belongs to any EXISTING module
+- **CRITICAL: Consider BOTH the file path AND the documentation content when making assignments**
+- File paths often contain keywords that indicate module membership (e.g., files in `app/Livewire/DataRequests/` likely belong to a data-requests module)
+- Look for module names or related concepts in the file path structure
 - Only assign files that are clearly related to the module's purpose
 - Use high confidence scores (0.8+) for obvious matches
 
 PHASE 2 - Create new module suggestions:
 - From the remaining unassigned files, identify natural groupings that could form NEW modules
 - Look for files that share common functionality, purpose, or domain
+- **Use directory structure as a strong hint for grouping** (e.g., all files in `app/Livewire/DataRequests/` likely form a cohesive module)
 - Group related components (e.g., Livewire components, controllers, services, models)
 - Each new module must have at least 3 related files
 
 IMPORTANT: Process ALL files in the batch - either assign them to existing modules OR group them into new module suggestions. Aim to minimize unprocessed files.
+
+Example path analysis:
+- File path: `app/Livewire/DataRequests/Create.php` → Should be assigned to "data-requests" or similar module
+- File path: `app/Http/Controllers/Auth/LoginController.php` → Should be assigned to "authentication" module
+- File path: `app/Models/DataRequest.php` → Should be assigned to "data-requests" module (note: "DataRequest" in filename)
 
 Return your response as a JSON object with the following structure:
 
@@ -462,8 +491,10 @@ Guidelines:
 - New modules must have at least 3 related files
 - Module slugs should be lowercase with hyphens (e.g., "user-management")
 - Descriptions should be comprehensive (2-3 sentences minimum)
-- Group files by shared functionality, not just by directory
-- Consider the actual purpose and functionality when grouping
+- **ALWAYS analyze the file path first** - it often contains the clearest indication of module membership
+- Match path keywords to module names (e.g., "DataRequest" in path → data-request module)
+- Consider both directory structure AND file purpose when grouping
+- Files in the same logical directory often belong together
 
 Common existing module slugs you might use:
 - age-of-majority, api-services, assent-handling, audit-logging, authentication

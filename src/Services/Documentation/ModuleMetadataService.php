@@ -17,6 +17,9 @@ class ModuleMetadataService
     {
         $this->metadataPath = base_path(config('cascadedocs.paths.modules.metadata'));
         $this->contentPath = base_path(config('cascadedocs.paths.modules.content'));
+
+        // Ensure directories exist
+        $this->ensureDirectoriesExist();
     }
 
     /**
@@ -318,5 +321,22 @@ class ModuleMetadataService
         $commit = trim(shell_exec('git rev-parse HEAD') ?? 'unknown');
 
         return $commit ?: 'unknown';
+    }
+
+    /**
+     * Ensure required directories exist.
+     */
+    protected function ensureDirectoriesExist(): void
+    {
+        $directories = [
+            $this->metadataPath,
+            $this->contentPath,
+        ];
+
+        foreach ($directories as $dir) {
+            if (! File::exists($dir)) {
+                File::makeDirectory($dir, 0755, true);
+            }
+        }
     }
 }
