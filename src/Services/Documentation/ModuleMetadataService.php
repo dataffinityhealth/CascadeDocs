@@ -14,8 +14,8 @@ class ModuleMetadataService
 
     public function __construct()
     {
-        $this->metadataPath = base_path('docs/source_documents/modules/metadata');
-        $this->contentPath  = base_path('docs/source_documents/modules/content');
+        $this->metadataPath = base_path(config('cascadedocs.paths.modules.metadata'));
+        $this->contentPath  = base_path(config('cascadedocs.paths.modules.content'));
     }
 
     /**

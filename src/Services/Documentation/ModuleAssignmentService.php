@@ -15,7 +15,7 @@ class ModuleAssignmentService
     public function __construct()
     {
         $this->module_service = new ModuleMappingService();
-        $this->log_path       = base_path('docs/module-assignment-log.json');
+        $this->log_path       = base_path(config('cascadedocs.paths.tracking.module_assignment'));
     }
 
     public function analyze_module_assignments(): array
@@ -56,11 +56,12 @@ class ModuleAssignmentService
         $documented_files = collect();
 
         // Check all three tiers for documented files
-        $tiers = ['short', 'medium', 'full'];
+        $tiers = config('cascadedocs.tier_directories');
 
         foreach ($tiers as $tier)
         {
-            $tier_path = base_path("docs/source_documents/{$tier}");
+            $output_path = config('cascadedocs.paths.output');
+            $tier_path = base_path("{$output_path}{$tier}");
 
             if (File::exists($tier_path))
             {
@@ -81,7 +82,7 @@ class ModuleAssignmentService
                         } elseif (Str::startsWith($source_path, 'resources/js/'))
                         {
                             // Could be .js, .vue, .jsx, etc. - check which exists
-                            $possible_extensions = ['js', 'vue', 'jsx', 'ts', 'tsx'];
+                            $possible_extensions = config('cascadedocs.file_extensions.javascript');
 
                             foreach ($possible_extensions as $ext)
                             {
@@ -143,7 +144,7 @@ class ModuleAssignmentService
 
         foreach ($by_directory as $directory => $files)
         {
-            if ($files->count() >= 3)
+            if ($files->count() >= config('cascadedocs.limits.module_detection.min_files_for_module'))
             {
                 // Enough files to potentially form a module
                 $potential_modules[$directory] = [
@@ -154,67 +155,21 @@ class ModuleAssignmentService
             }
         }
 
-        // Also look for conceptual groupings based on file names
-        $conceptual_groups = $this->find_conceptual_groups($unassigned_files);
-
-        foreach ($conceptual_groups as $concept => $files)
-        {
-            if ($files->count() >= 3)
-            {
-                $potential_modules["concept_{$concept}"] = [
-                    'file_count'     => $files->count(),
-                    'files'          => $files->toArray(),
-                    'suggested_name' => Str::slug($concept),
-                    'type'           => 'conceptual',
-                ];
-            }
-        }
+        // Conceptual groupings are now handled by AI analysis
+        // The AI will analyze actual code content to suggest meaningful modules
+        // rather than relying on keyword matching
 
         return $potential_modules;
     }
 
     protected function find_conceptual_groups(Collection $files): Collection
     {
-        $groups = collect();
-
-        // Common concepts to look for
-        $concepts = [
-            'authentication' => ['auth', 'login', 'logout', 'session', 'token'],
-            'authorization'  => ['permission', 'role', 'policy', 'gate', 'ability'],
-            'billing'        => ['payment', 'invoice', 'subscription', 'charge', 'stripe'],
-            'notification'   => ['notify', 'alert', 'email', 'sms', 'push'],
-            'documentation'  => ['document', 'doc', 'generate', 'update'],
-            'reporting'      => ['report', 'analytics', 'metrics', 'statistics'],
-            'integration'    => ['api', 'webhook', 'external', 'third-party'],
-            'testing'        => ['test', 'mock', 'stub', 'fixture'],
-            'caching'        => ['cache', 'redis', 'memcached'],
-            'search'         => ['search', 'filter', 'query', 'elastic'],
-        ];
-
-        foreach ($concepts as $concept => $keywords)
-        {
-            $matching_files = $files->filter(function ($file) use ($keywords)
-            {
-                $lower_file = strtolower($file);
-
-                foreach ($keywords as $keyword)
-                {
-                    if (Str::contains($lower_file, $keyword))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            });
-
-            if ($matching_files->isNotEmpty())
-            {
-                $groups[$concept] = $matching_files;
-            }
-        }
-
-        return $groups;
+        // This method is intentionally left empty as conceptual grouping
+        // should be determined by AI analysis of the actual code content,
+        // not by hardcoded keyword matching.
+        // The AI will analyze the code and suggest appropriate modules
+        // based on the actual functionality and relationships it discovers.
+        return collect();
     }
 
     protected function suggest_module_name(string $directory, Collection $files): string
@@ -225,7 +180,7 @@ class ModuleAssignmentService
 
         foreach ($parts as $part)
         {
-            if (! in_array($part, ['app', 'resources', 'js', 'src']))
+            if (! in_array($part, config('cascadedocs.excluded_namespace_parts')))
             {
                 $meaningful_parts[] = $part;
             }
@@ -258,7 +213,9 @@ class ModuleAssignmentService
             {
                 $word = strtolower(trim($word));
 
-                if (strlen($word) > 2 && ! in_array($word, ['php', 'js', 'vue', 'jsx']))
+                $minLength = config('cascadedocs.limits.module_detection.min_word_length');
+                $excludedWords = config('cascadedocs.exclude.words', ['php', 'js', 'vue', 'jsx']);
+                if (strlen($word) > $minLength && ! in_array($word, $excludedWords))
                 {
                     $word_counts[$word] = ($word_counts[$word] ?? 0) + 1;
                 }
@@ -298,7 +255,8 @@ class ModuleAssignmentService
         $confidence = 0.0;
 
         // More files = higher confidence
-        $confidence += min($module_info['file_count'] / 10, 0.5);
+        $divisor = config('cascadedocs.limits.module_detection.confidence_divisor');
+        $confidence += min($module_info['file_count'] / $divisor, 0.5);
 
         // Files in same directory = higher confidence
         if (! isset($module_info['type']) || $module_info['type'] !== 'conceptual')
@@ -310,12 +268,14 @@ class ModuleAssignmentService
         $files         = collect($module_info['files']);
         $common_prefix = $this->find_common_prefix($files);
 
-        if (strlen($common_prefix) > 3)
+        $minPrefixLength = config('cascadedocs.limits.module_detection.min_common_prefix_length');
+        if (strlen($common_prefix) > $minPrefixLength)
         {
             $confidence += 0.2;
         }
 
-        return min($confidence, 1.0);
+        $maxConfidence = config('cascadedocs.limits.module_detection.max_confidence');
+        return min($confidence, $maxConfidence);
     }
 
     protected function find_common_prefix(Collection $files): string

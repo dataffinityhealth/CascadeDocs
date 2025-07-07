@@ -12,7 +12,7 @@ class GenerateArchitectureDocumentationCommand extends Command
     use ProviderResponseTrait;
 
     protected $signature = 'cascadedocs:generate-architecture-docs 
-        {--model=o3 : The AI model to use for generation}';
+        {--model= : The AI model to use for generation}';
     
     protected $description = 'Generate high-level architecture documentation from module summaries';
 
@@ -20,7 +20,7 @@ class GenerateArchitectureDocumentationCommand extends Command
     {
         $this->info('Starting architecture documentation generation...');
         
-        $model = $this->option('model');
+        $model = $this->option('model') ?: config('cascadedocs.ai.default_model');
         $metadataService = new ModuleMetadataService();
         
         // Collect all module summaries
@@ -45,17 +45,17 @@ class GenerateArchitectureDocumentationCommand extends Command
             $architecturePath = base_path($outputPath . 'architecture/');
             
             if (!File::exists($architecturePath)) {
-                File::makeDirectory($architecturePath, 0755, true);
+                File::makeDirectory($architecturePath, config('cascadedocs.permissions.directory', 0755), true);
             }
             
-            $filePath = $architecturePath . 'system-architecture.md';
+            $filePath = $architecturePath . config('cascadedocs.paths.architecture.main');
             File::put($filePath, $architectureDoc);
             
             $this->info('✓ Architecture documentation saved to: ' . $filePath);
             
             // Also create a high-level summary
             $summaryDoc = $this->generateArchitectureSummary($modules, $model);
-            $summaryPath = $architecturePath . 'architecture-summary.md';
+            $summaryPath = $architecturePath . config('cascadedocs.paths.architecture.summary');
             File::put($summaryPath, $summaryDoc);
             
             $this->info('✓ Architecture summary saved to: ' . $summaryPath);

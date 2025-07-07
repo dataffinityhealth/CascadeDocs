@@ -16,11 +16,11 @@ class AssignFilesToModulesCommand extends Command
     protected $signature = 'documentation:assign-files-to-modules
         {--dry-run : Preview changes without applying them}
         {--auto-create : Automatically create suggested new modules}
-        {--confidence=0.7 : Minimum confidence threshold for auto-assignment}
+        {--confidence= : Minimum confidence threshold for auto-assignment}
         {--interactive : Prompt for confirmation on low-confidence assignments}
         {--limit=0 : Process only N unassigned files (0 = all)}
         {--output-prompt : Output the generated prompt to a file}
-        {--model=o3 : The AI model to use for assignment}
+        {--model= : The AI model to use for assignment}
         {--force : Apply changes without confirmation}';
     protected $description = 'Assign unassigned documentation files to modules using AI suggestions';
     protected ModuleAssignmentAIService $aiService;
@@ -102,7 +102,9 @@ class AssignFilesToModulesCommand extends Command
 
         // Step 6: Process recommendations
         $this->info('Processing AI recommendations...');
-        $confidenceThreshold = (float) $this->option('confidence');
+        $confidenceThreshold = $this->option('confidence') !== null 
+            ? (float) $this->option('confidence') 
+            : config('cascadedocs.modules.default_confidence_threshold');
         $processed           = $this->aiService->processAIRecommendations($recommendations, $confidenceThreshold);
 
         // Display results

@@ -53,7 +53,11 @@ class ModuleMappingService
         $path_parts    = explode('/', $relative_path);
 
         // Don't assign documentation system files to regular modules
-        if (Str::contains($relative_path, ['Documentation/', 'documentation']))
+        $excludedDirs = array_merge(
+            config('cascadedocs.exclude.directories', []),
+            ['Documentation/', 'documentation']
+        );
+        if (Str::contains($relative_path, $excludedDirs))
         {
             return null;
         }
@@ -103,7 +107,7 @@ class ModuleMappingService
 
     protected function load_module_mappings(): void
     {
-        $metadata_path = base_path('docs/source_documents/modules/metadata');
+        $metadata_path = base_path(config('cascadedocs.paths.modules.metadata'));
 
         if (! File::exists($metadata_path))
         {
@@ -217,7 +221,7 @@ class ModuleMappingService
         // Extract meaningful parts from the path
         foreach ($parts as $part)
         {
-            if (in_array($part, ['app', 'resources', 'js', 'php', 'src']))
+            if (in_array($part, config('cascadedocs.excluded_namespace_parts')))
             {
                 continue;
             }

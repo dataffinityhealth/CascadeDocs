@@ -159,7 +159,7 @@ class DocumentationDiffService
 
     public function load_update_log(): array
     {
-        $log_path = base_path('docs/documentation-update-log.json');
+        $log_path = base_path(config('cascadedocs.paths.tracking.documentation_update'));
 
         if (! File::exists($log_path))
         {
@@ -178,7 +178,7 @@ class DocumentationDiffService
 
     public function save_update_log(array $log): void
     {
-        $log_path = base_path('docs/documentation-update-log.json');
+        $log_path = base_path(config('cascadedocs.paths.tracking.documentation_update'));
 
         File::put($log_path, json_encode($log, JSON_PRETTY_PRINT));
     }
@@ -201,15 +201,23 @@ class DocumentationDiffService
     protected function is_documentable_file(string $file_path): bool
     {
         $extension               = pathinfo($file_path, PATHINFO_EXTENSION);
-        $documentable_extensions = ['php', 'js', 'vue', 'jsx', 'ts', 'tsx'];
+        $documentable_extensions = config('cascadedocs.file_types');
 
         if (! in_array($extension, $documentable_extensions))
         {
             return false;
         }
 
-        // Only document files in app and resources/js directories
-        if (! Str::startsWith($file_path, 'app/') && ! Str::startsWith($file_path, 'resources/js/'))
+        // Only document files in configured source directories
+        $sourceDirs = config('cascadedocs.paths.source');
+        $inSourceDir = false;
+        foreach ($sourceDirs as $dir) {
+            if (Str::startsWith($file_path, $dir)) {
+                $inSourceDir = true;
+                break;
+            }
+        }
+        if (!$inSourceDir)
         {
             return false;
         }

@@ -21,20 +21,23 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
-    public int $tries         = 3;
-    public int $timeout       = 300; // 5 minutes per file
+    public int $tries;
+    public int $timeout;
 
     public function __construct(
         public string $file_path,
         public string $tier = 'all',
-        public string $model = 'o3'
+        public ?string $model = null
     ) {
+        $this->tries = config('cascadedocs.queue.retry_attempts', 3);
+        $this->timeout = config('cascadedocs.queue.timeout', 300);
+        $this->model = $model ?? config('cascadedocs.ai.default_model', 'o3');
     }
 
     public function handle(): void
     {
         // Check if documentation already exists for the requested tiers
-        $tiers_to_check = $this->tier === 'all' ? ['micro', 'standard', 'expansive'] : [$this->tier];
+        $tiers_to_check = $this->tier === 'all' ? config('cascadedocs.tier_names') : [$this->tier];
         $existing_tiers = [];
 
         foreach ($tiers_to_check as $tier_to_check)
@@ -74,7 +77,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         } catch (ClaudeRateLimitException $e)
         {
             // Let the job retry automatically
-            $this->release(60); // Release back to queue after 60 seconds
+            $this->release(config('cascadedocs.queue.rate_limit_delay', 60)); // Release back to queue
 
             return;
         } catch (Exception $e)
@@ -82,7 +85,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
             throw new Exception('Failed to generate documentation: ' . $e->getMessage());
         }
 
-        $tiers_to_save = $this->tier === 'all' ? ['micro', 'standard', 'expansive'] : [$this->tier];
+        $tiers_to_save = $this->tier === 'all' ? config('cascadedocs.tier_names') : [$this->tier];
 
         foreach ($tiers_to_save as $current_tier)
         {
@@ -96,11 +99,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
 
     private function get_tier_document_path(string $source_file_path, string $tier): string
     {
-        $tier_map = [
-            'micro'     => 'short',
-            'standard'  => 'medium',
-            'expansive' => 'full',
-        ];
+        $tier_map = config('cascadedocs.tiers');
 
         $relative_path  = Str::after($source_file_path, base_path() . DIRECTORY_SEPARATOR);
         $file_extension = pathinfo($source_file_path, PATHINFO_EXTENSION);
@@ -115,7 +114,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
 
         if (! File::exists($doc_directory))
         {
-            File::makeDirectory($doc_directory, 0755, true);
+            File::makeDirectory($doc_directory, config('cascadedocs.permissions.directory', 0755), true);
         }
 
         File::put($doc_path, $content);

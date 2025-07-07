@@ -20,11 +20,7 @@ class CascadeDocs
      */
     public function getDocumentation(string $filePath, string $tier = 'medium'): ?string
     {
-        $tierMap = [
-            'micro' => 'short',
-            'standard' => 'medium',
-            'expansive' => 'full',
-        ];
+        $tierMap = config('cascadedocs.tiers');
 
         $outputPath = config('cascadedocs.paths.output', 'docs/source_documents/');
         $relativePath = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $filePath);

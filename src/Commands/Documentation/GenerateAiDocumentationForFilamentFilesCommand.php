@@ -19,13 +19,15 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
         $this->info('Starting documentation generation for Filament files...');
 
         // Create documentation directory if it doesn't exist
-        if (! File::exists(base_path('docs/code_documentation')))
+        $codeDocPath = base_path(config('cascadedocs.paths.code_documentation'));
+        if (! File::exists($codeDocPath))
         {
-            File::makeDirectory(base_path('docs/code_documentation'), 0755, true);
+            File::makeDirectory($codeDocPath, config('cascadedocs.permissions.directory', 0755), true);
         }
 
         // Get all files in the Livewire directory
-        $livewire_files = $this->get_files_recursively(app_path('Livewire'));
+        $livewirePath = base_path(config('cascadedocs.filament.livewire_path'));
+        $livewire_files = $this->get_files_recursively($livewirePath);
         $filament_files = $this->filter_filament_files($livewire_files);
 
         $this->info('Found ' . count($filament_files) . ' Filament files to document.');
@@ -38,7 +40,7 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
             // Generate documentation file path
             $relative_path = Str::after($file_path, app_path());
             $relative_path = Str::beforeLast($relative_path, '.php');
-            $doc_path      = base_path('docs/code_documentation' . $relative_path . '.md');
+            $doc_path      = base_path(config('cascadedocs.paths.code_documentation') . $relative_path . '.md');
 
             // Skip if documentation already exists
             if (File::exists($doc_path))
@@ -52,14 +54,15 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
             $file_contents = File::get($file_path);
             $prompt        = $this->get_prompt($file_contents);
 
-            $response = $this->get_response_from_provider($prompt, 'claude-3-5-haiku-20241022', json_mode: false);
+            $model = config('cascadedocs.ai.filament_model');
+            $response = $this->get_response_from_provider($prompt, $model, json_mode: false);
 
             // Create directory structure if it doesn't exist
             $doc_directory = dirname($doc_path);
 
             if (! File::exists($doc_directory))
             {
-                File::makeDirectory($doc_directory, 0755, true);
+                File::makeDirectory($doc_directory, config('cascadedocs.permissions.directory', 0755), true);
             }
 
             // Write documentation to file
@@ -96,7 +99,7 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
         {
             $content = File::get($file);
 
-            if (Str::contains($content, 'use Filament\\'))
+            if (Str::contains($content, config('cascadedocs.filament.namespace_pattern')))
             {
                 $filament_files[] = $file;
             }

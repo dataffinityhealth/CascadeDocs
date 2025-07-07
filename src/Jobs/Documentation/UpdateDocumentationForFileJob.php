@@ -22,15 +22,18 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
-    public int $tries   = 3;
-    public int $timeout = 300; // 5 minutes per file
+    public int $tries;
+    public int $timeout;
 
     public function __construct(
         public string $file_path,
         public string $from_sha,
         public string $to_sha,
-        public string $model = 'o3'
+        public ?string $model = null
     ) {
+        $this->tries = config('cascadedocs.queue.retry_attempts', 3);
+        $this->timeout = config('cascadedocs.queue.timeout', 300);
+        $this->model = $model ?? config('cascadedocs.ai.default_model', 'o3');
     }
 
     public function handle(): void
@@ -93,7 +96,7 @@ class UpdateDocumentationForFileJob implements ShouldQueue
         } catch (ClaudeRateLimitException $e)
         {
             // Let the job retry automatically
-            $this->release(60); // Release back to queue after 60 seconds
+            $this->release(config('cascadedocs.queue.rate_limit_delay', 60)); // Release back to queue
 
             return;
         } catch (Exception $e)
@@ -105,7 +108,7 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     protected function load_existing_documentation(): array
     {
         $docs  = [];
-        $tiers = ['micro' => 'short', 'standard' => 'medium', 'expansive' => 'full'];
+        $tiers = config('cascadedocs.tiers');
 
         foreach ($tiers as $tier => $folder)
         {
@@ -174,17 +177,14 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
     protected function get_tier_document_path(string $source_file_path, string $tier): string
     {
-        $tier_map = [
-            'micro'     => 'short',
-            'standard'  => 'medium',
-            'expansive' => 'full',
-        ];
+        $tier_map = config('cascadedocs.tiers');
 
         $relative_path  = Str::after($source_file_path, base_path() . DIRECTORY_SEPARATOR);
         $file_extension = pathinfo($source_file_path, PATHINFO_EXTENSION);
         $relative_path  = Str::beforeLast($relative_path, '.' . $file_extension);
 
-        return base_path("docs/source_documents/{$tier_map[$tier]}/{$relative_path}.md");
+        $output_path = config('cascadedocs.paths.output');
+        return base_path("{$output_path}{$tier_map[$tier]}/{$relative_path}.md");
     }
 
     protected function write_documentation_file(string $doc_path, string $content): void
@@ -193,7 +193,7 @@ class UpdateDocumentationForFileJob implements ShouldQueue
 
         if (! File::exists($doc_directory))
         {
-            File::makeDirectory($doc_directory, 0755, true);
+            File::makeDirectory($doc_directory, config('cascadedocs.permissions.directory', 0755), true);
         }
 
         // Update commit SHA in content if it's the expansive tier
@@ -226,7 +226,7 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     protected function handle_deleted_file(): void
     {
         // Remove documentation files for deleted source files
-        $tiers = ['micro' => 'short', 'standard' => 'medium', 'expansive' => 'full'];
+        $tiers = config('cascadedocs.tiers');
 
         foreach ($tiers as $tier => $folder)
         {
