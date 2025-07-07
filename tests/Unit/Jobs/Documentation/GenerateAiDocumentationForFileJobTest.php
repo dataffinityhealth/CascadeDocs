@@ -319,7 +319,7 @@ it('generates all tiers when some are missing', function () {
     File::shouldReceive('get')
         ->with($filePath)
         ->andReturn("<?php\n\nclass PartialService {}");
-        
+
     // Mock file get for existing documentation (only micro exists)
     File::shouldReceive('get')
         ->with($microPath)

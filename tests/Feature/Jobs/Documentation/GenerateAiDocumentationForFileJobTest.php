@@ -133,7 +133,7 @@ PHP;
 
         // The job should handle the rate limit gracefully without throwing an exception
         $job->handle();
-        
+
         // The job should not create any documentation files when rate limited
         $this->assertFileDoesNotExist(base_path('docs/source_documents/short/app/TestClass.md'));
     }
@@ -243,7 +243,7 @@ JS;
                 'standard' => "```yaml\ndoc_tier: standard\ndoc_version: 1\n```\n\n# TestClass\n\n## Purpose\nTest class for documentation generation.",
                 'expansive' => "```yaml\ndoc_tier: expansive\ndoc_version: 1\n```\n\n# TestClass\n\n## File Purpose\nComprehensive test class documentation.",
             ];
-            
+
             // Check if it's an OpenAI request (to openai.com)
             if (str_contains($request->url(), 'openai.com')) {
                 // Return OpenAI format
@@ -258,12 +258,12 @@ JS;
                     ],
                 ], 200);
             }
-            
+
             // Otherwise it's Claude format
             // For JSON mode, ClaudeTrait adds '{' prefix, so we need to return JSON without the opening brace
             $jsonContent = json_encode($documentation);
             $jsonWithoutOpeningBrace = substr($jsonContent, 1); // Remove the opening '{'
-            
+
             return Http::response([
                 'content' => [
                     [
