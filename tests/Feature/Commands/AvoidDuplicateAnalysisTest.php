@@ -14,7 +14,7 @@ describe('Avoid Duplicate Analysis', function () {
         Config::set('cascadedocs.tier_directories', ['full', 'medium', 'short']);
         Config::set('cascadedocs.ai.default_model', 'gpt-4o');
         Config::set('cascadedocs.ai.default_provider', 'openai');
-        
+
         // Create test directories
         File::makeDirectory(base_path('docs'), 0755, true, true);
         File::makeDirectory(base_path('docs/source_documents'), 0755, true, true);

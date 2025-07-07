@@ -41,7 +41,7 @@ class AssignFilesToModulesCommand extends Command
         // Step 1: Load current state (don't re-analyze if already done)
         $this->info('Loading current module assignments...');
         $analysis = $this->aiService->load_log();
-        
+
         // If no analysis exists, run it
         if (empty($analysis['last_analysis'])) {
             $this->info('No existing analysis found. Running initial analysis...');
