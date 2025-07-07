@@ -166,9 +166,9 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
 
             // Only check for obvious truncation indicators
             $trimmedContent = trim($content);
-            
+
             // Check if it ends with incomplete markdown or code block
-            if (preg_match('/```[^`]*$/', $trimmedContent) || 
+            if (preg_match('/```[^`]*$/', $trimmedContent) ||
                 preg_match('/`[^`]$/', $trimmedContent) ||
                 preg_match('/\|\s*$/', $trimmedContent)) {
                 throw new Exception("Documentation appears to be truncated - incomplete markdown structure in tier: {$tier}");
