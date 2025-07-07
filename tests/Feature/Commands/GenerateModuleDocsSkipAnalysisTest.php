@@ -7,7 +7,7 @@ describe('Generate Module Docs Skip Analysis', function () {
     beforeEach(function () {
         // Set up config paths
         Config::set('cascadedocs.paths.tracking.module_assignment', 'docs/module-assignment-log.json');
-        
+
         // Create test directories
         File::makeDirectory(base_path('docs'), 0755, true, true);
 
@@ -43,22 +43,22 @@ describe('Generate Module Docs Skip Analysis', function () {
         );
 
         // Test just the first part of the command - checking if analysis is skipped
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\GenerateModuleDocumentationCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\GenerateModuleDocumentationCommand;
         $command->setLaravel(app());
-        
+
         // Mock the command to capture output
-        $output = new \Symfony\Component\Console\Output\BufferedOutput();
+        $output = new \Symfony\Component\Console\Output\BufferedOutput;
         $input = new \Symfony\Component\Console\Input\ArrayInput([]);
-        
+
         // We'll test by checking the file existence logic directly
         $moduleAssignmentLogPath = base_path(config('cascadedocs.paths.tracking.module_assignment'));
         expect(File::exists($moduleAssignmentLogPath))->toBeTrue();
-        
+
         // The command should skip analysis when the file exists
         $log = json_decode(File::get($moduleAssignmentLogPath), true);
         $assignedCount = array_sum(array_map('count', $log['assigned_files'] ?? []));
         $unassignedCount = count($log['unassigned_files'] ?? []);
-        
+
         expect($assignedCount)->toBe(3);
         expect($unassignedCount)->toBe(2);
     });
@@ -66,7 +66,7 @@ describe('Generate Module Docs Skip Analysis', function () {
     it('would run analysis when no module-assignment-log.json exists', function () {
         // Ensure no log exists
         expect(File::exists(base_path('docs/module-assignment-log.json')))->toBeFalse();
-        
+
         // The command logic would run analysis in this case
         $moduleAssignmentLogPath = base_path(config('cascadedocs.paths.tracking.module_assignment'));
         expect(File::exists($moduleAssignmentLogPath))->toBeFalse();
@@ -93,14 +93,14 @@ describe('Generate Module Docs Skip Analysis', function () {
 
         // File exists
         expect(File::exists(base_path('docs/module-assignment-log.json')))->toBeTrue();
-        
+
         // With --fresh option, the logic would be: if ($this->option('fresh') || !File::exists($moduleAssignmentLogPath))
         // So even with existing file, fresh option would trigger analysis
-        $wouldRunAnalysisWithFresh = true || !File::exists(base_path('docs/module-assignment-log.json'));
+        $wouldRunAnalysisWithFresh = true || ! File::exists(base_path('docs/module-assignment-log.json'));
         expect($wouldRunAnalysisWithFresh)->toBeTrue();
-        
+
         // Without fresh option
-        $wouldRunAnalysisWithoutFresh = false || !File::exists(base_path('docs/module-assignment-log.json'));
+        $wouldRunAnalysisWithoutFresh = false || ! File::exists(base_path('docs/module-assignment-log.json'));
         expect($wouldRunAnalysisWithoutFresh)->toBeFalse();
     });
 });

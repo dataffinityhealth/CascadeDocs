@@ -97,7 +97,7 @@ class UpdateAllModuleDocumentationCommand extends Command
             return 0;
         }
 
-        if (!$this->option('force') && !$this->confirm('Do you want to update documentation for these modules?')) {
+        if (! $this->option('force') && ! $this->confirm('Do you want to update documentation for these modules?')) {
             $this->info('Update cancelled.');
 
             return 0;

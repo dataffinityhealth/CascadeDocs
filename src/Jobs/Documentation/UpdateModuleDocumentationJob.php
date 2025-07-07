@@ -126,7 +126,7 @@ class UpdateModuleDocumentationJob implements ShouldQueue
                 'model' => $this->model,
             ]);
 
-            $response = $this->get_response_from_provider($prompt, $this->model,json_mode:false);
+            $response = $this->get_response_from_provider($prompt, $this->model, json_mode: false);
 
             // Validate response doesn't contain placeholders
             $placeholder_patterns = [

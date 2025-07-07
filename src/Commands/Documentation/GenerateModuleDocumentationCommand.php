@@ -21,8 +21,8 @@ class GenerateModuleDocumentationCommand extends Command
 
         // Step 1: Analyze module assignments using AI (only if not already done)
         $moduleAssignmentLogPath = base_path(config('cascadedocs.paths.tracking.module_assignment'));
-        
-        if ($this->option('fresh') || !File::exists($moduleAssignmentLogPath)) {
+
+        if ($this->option('fresh') || ! File::exists($moduleAssignmentLogPath)) {
             $this->info('Step 1: Analyzing module assignments using AI...');
             if ($this->option('fresh')) {
                 $this->warn('Running fresh analysis as requested...');
