@@ -2,11 +2,11 @@
 
 namespace Lumiio\CascadeDocs\Tests\Unit\Services\Documentation;
 
-use Lumiio\CascadeDocs\Services\Documentation\DocumentationParser;
 use Exception;
 use Illuminate\Support\Facades\File;
-use PHPUnit\Framework\Attributes\Test;
+use Lumiio\CascadeDocs\Services\Documentation\DocumentationParser;
 use Lumiio\CascadeDocs\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class DocumentationParserTest extends TestCase
 {
@@ -15,7 +15,7 @@ class DocumentationParserTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->parser = new DocumentationParser();
+        $this->parser = new DocumentationParser;
     }
 
     #[Test]

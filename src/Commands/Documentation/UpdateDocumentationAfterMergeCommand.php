@@ -2,6 +2,10 @@
 
 namespace Lumiio\CascadeDocs\Commands\Documentation;
 
+use Carbon\Carbon;
+use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
 use Lumiio\CascadeDocs\Jobs\Documentation\GenerateAiDocumentationForFileJob;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateDocumentationForFileJob;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateModuleDocumentationJob;
@@ -9,10 +13,6 @@ use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentService;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMappingService;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
-use Carbon\Carbon;
-use Illuminate\Console\Command;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\File;
 
 class UpdateDocumentationAfterMergeCommand extends Command
 {
@@ -21,19 +21,24 @@ class UpdateDocumentationAfterMergeCommand extends Command
                             {--model=o3 : AI model to use}
                             {--dry-run : Show what would be updated}
                             {--limit=400 : Maximum number of unassigned files to process}';
+
     protected $description = 'Complete documentation update workflow after merging a branch';
+
     protected DocumentationDiffService $diffService;
+
     protected ModuleMappingService $moduleService;
+
     protected ModuleMetadataService $metadataService;
+
     protected ModuleAssignmentService $assignmentService;
 
     public function __construct()
     {
         parent::__construct();
-        $this->diffService       = new DocumentationDiffService();
-        $this->moduleService     = new ModuleMappingService();
-        $this->metadataService   = new ModuleMetadataService();
-        $this->assignmentService = new ModuleAssignmentService();
+        $this->diffService = new DocumentationDiffService;
+        $this->moduleService = new ModuleMappingService;
+        $this->metadataService = new ModuleMetadataService;
+        $this->assignmentService = new ModuleAssignmentService;
     }
 
     public function handle(): int
@@ -41,14 +46,13 @@ class UpdateDocumentationAfterMergeCommand extends Command
         $this->info('Starting complete documentation update workflow...');
 
         $dryRun = $this->option('dry-run');
-        $model  = $this->option('model');
+        $model = $this->option('model');
 
         // Step 1: Load update log and determine SHAs
         $updateLog = $this->diffService->load_update_log();
-        $fromSha   = $this->option('since') ?? $updateLog['last_update_sha'];
+        $fromSha = $this->option('since') ?? $updateLog['last_update_sha'];
 
-        if (! $fromSha)
-        {
+        if (! $fromSha) {
             $this->error('No previous update SHA found. Please run with --since=<commit-sha>');
 
             return 1;
@@ -56,8 +60,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
 
         $currentSha = $this->diffService->get_current_commit_sha();
 
-        if ($fromSha === $currentSha)
-        {
+        if ($fromSha === $currentSha) {
             $this->info('Documentation is already up to date.');
 
             return 0;
@@ -67,13 +70,12 @@ class UpdateDocumentationAfterMergeCommand extends Command
 
         // Step 2: Get all file changes
         $changedFiles = $this->diffService->get_changed_files($fromSha, $currentSha);
-        $newFiles     = $this->diffService->get_new_files($fromSha, $currentSha);
+        $newFiles = $this->diffService->get_new_files($fromSha, $currentSha);
         $deletedFiles = $this->diffService->get_deleted_files($fromSha, $currentSha);
 
         $allChanged = $changedFiles->merge($newFiles)->unique();
 
-        if ($allChanged->isEmpty() && $deletedFiles->isEmpty())
-        {
+        if ($allChanged->isEmpty() && $deletedFiles->isEmpty()) {
             $this->info('No documentable files have changed.');
 
             return 0;
@@ -83,8 +85,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
         $summary = $this->diffService->analyze_changes_for_summary($allChanged);
         $this->displayChangeSummary($summary, $dryRun);
 
-        if ($dryRun)
-        {
+        if ($dryRun) {
             $this->displayDryRunDetails($allChanged, $deletedFiles);
 
             return 0;
@@ -106,7 +107,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
         $this->updateAffectedModules($affectedModules, $currentSha, $model);
 
         // Step 8: Update the log
-        $updateLog['last_update_sha']       = $currentSha;
+        $updateLog['last_update_sha'] = $currentSha;
         $updateLog['last_update_timestamp'] = Carbon::now()->toIso8601String();
         $this->diffService->save_update_log($updateLog);
 
@@ -125,9 +126,8 @@ class UpdateDocumentationAfterMergeCommand extends Command
             collect($summary['by_type'])->map(fn ($count, $type) => [$type, $count])->values()
         );
 
-        if (! empty($summary['affected_modules']))
-        {
-            $this->info('Affected modules: ' . implode(', ', $summary['affected_modules']));
+        if (! empty($summary['affected_modules'])) {
+            $this->info('Affected modules: '.implode(', ', $summary['affected_modules']));
         }
     }
 
@@ -135,39 +135,33 @@ class UpdateDocumentationAfterMergeCommand extends Command
     {
         $this->info("\nDry run mode - no changes will be made.");
 
-        if ($changedFiles->isNotEmpty())
-        {
+        if ($changedFiles->isNotEmpty()) {
             $this->info("\nFiles that would be updated:");
 
-            foreach ($changedFiles as $file)
-            {
-                $this->line('  - ' . $this->diffService->get_relative_path($file));
+            foreach ($changedFiles as $file) {
+                $this->line('  - '.$this->diffService->get_relative_path($file));
             }
         }
 
-        if ($deletedFiles->isNotEmpty())
-        {
+        if ($deletedFiles->isNotEmpty()) {
             $this->info("\nFiles that would be removed:");
 
-            foreach ($deletedFiles as $file)
-            {
-                $this->line('  - ' . $this->diffService->get_relative_path($file));
+            foreach ($deletedFiles as $file) {
+                $this->line('  - '.$this->diffService->get_relative_path($file));
             }
         }
     }
 
     protected function processNewFiles(Collection $newFiles, string $model): void
     {
-        if ($newFiles->isEmpty())
-        {
+        if ($newFiles->isEmpty()) {
             return;
         }
 
         $this->info("\n📄 Processing {$newFiles->count()} new files...");
         $bar = $this->output->createProgressBar($newFiles->count());
 
-        foreach ($newFiles as $file)
-        {
+        foreach ($newFiles as $file) {
             // Queue documentation generation for all tiers
             GenerateAiDocumentationForFileJob::dispatch($file, 'all', $model);
             $bar->advance();
@@ -179,8 +173,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
 
     protected function processChangedFiles(Collection $changedFiles, string $fromSha, string $currentSha, string $model): Collection
     {
-        if ($changedFiles->isEmpty())
-        {
+        if ($changedFiles->isEmpty()) {
             return collect();
         }
 
@@ -189,16 +182,14 @@ class UpdateDocumentationAfterMergeCommand extends Command
 
         $affectedModules = collect();
 
-        foreach ($changedFiles as $file)
-        {
+        foreach ($changedFiles as $file) {
             // Update documentation
             UpdateDocumentationForFileJob::dispatch($file, $fromSha, $currentSha, $model);
 
             // Find module and mark file as undocumented
             $module = $this->moduleService->get_module_for_file($file);
 
-            if ($module)
-            {
+            if ($module) {
                 $this->metadataService->moveFileToUndocumented($module, $file);
                 $affectedModules->push($module);
             }
@@ -214,19 +205,16 @@ class UpdateDocumentationAfterMergeCommand extends Command
 
     protected function processDeletedFiles(Collection $deletedFiles): void
     {
-        if ($deletedFiles->isEmpty())
-        {
+        if ($deletedFiles->isEmpty()) {
             return;
         }
 
         $this->info("\n🗑️  Processing {$deletedFiles->count()} deleted files...");
 
-        foreach ($deletedFiles as $file)
-        {
+        foreach ($deletedFiles as $file) {
             $module = $this->moduleService->get_module_for_file($file);
 
-            if ($module)
-            {
+            if ($module) {
                 $this->metadataService->removeFiles($module, [$file]);
             }
         }
@@ -236,11 +224,10 @@ class UpdateDocumentationAfterMergeCommand extends Command
     {
         $this->info("\n🔍 Checking for unassigned files...");
 
-        $analysis        = $this->assignmentService->analyze_module_assignments();
+        $analysis = $this->assignmentService->analyze_module_assignments();
         $unassignedCount = count($analysis['unassigned_files']);
 
-        if ($unassignedCount === 0)
-        {
+        if ($unassignedCount === 0) {
             $this->info('All files are assigned to modules.');
 
             return;
@@ -250,17 +237,16 @@ class UpdateDocumentationAfterMergeCommand extends Command
 
         $limit = (int) $this->option('limit');
 
-        if ($limit > 0 && $unassignedCount > $limit)
-        {
+        if ($limit > 0 && $unassignedCount > $limit) {
             $this->info("Limiting assignment to {$limit} files.");
         }
 
         // Run the assignment command with auto-create and force
         $this->call('documentation:assign-files-to-modules', [
-            '--model'       => $model,
-            '--limit'       => $limit,
+            '--model' => $model,
+            '--limit' => $limit,
             '--auto-create' => true,
-            '--force'       => true,  // Skip confirmation prompt
+            '--force' => true,  // Skip confirmation prompt
         ]);
     }
 
@@ -271,12 +257,10 @@ class UpdateDocumentationAfterMergeCommand extends Command
 
         $allModules = $this->metadataService->getAllModuleSlugs();
 
-        foreach ($allModules as $slug)
-        {
+        foreach ($allModules as $slug) {
             $metadata = $this->metadataService->loadMetadata($slug);
 
-            if ($metadata && ! empty($metadata['undocumented_files']))
-            {
+            if ($metadata && ! empty($metadata['undocumented_files'])) {
                 $modulesToUpdate->push($slug);
             }
         }
@@ -284,8 +268,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
         // Include explicitly affected modules
         $modulesToUpdate = $modulesToUpdate->merge($affectedModules)->unique();
 
-        if ($modulesToUpdate->isEmpty())
-        {
+        if ($modulesToUpdate->isEmpty()) {
             $this->info("\n✅ No module documentation updates needed.");
 
             return;
@@ -294,8 +277,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
         $this->info("\n📚 Updating {$modulesToUpdate->count()} module documentation...");
         $bar = $this->output->createProgressBar($modulesToUpdate->count());
 
-        foreach ($modulesToUpdate as $module)
-        {
+        foreach ($modulesToUpdate as $module) {
             UpdateModuleDocumentationJob::dispatch($module, $currentSha, $model)
                 ->onQueue('module_updates');
             $bar->advance();

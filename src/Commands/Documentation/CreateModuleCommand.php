@@ -2,11 +2,11 @@
 
 namespace Lumiio\CascadeDocs\Commands\Documentation;
 
-use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentService;
 
 class CreateModuleCommand extends Command
 {
@@ -16,6 +16,7 @@ class CreateModuleCommand extends Command
         {--from-suggestion : Use files from a suggested module}
         {--title= : Module title (defaults to formatted name)}
         {--description= : Module description}';
+
     protected $description = 'Create a new documentation module';
 
     public function handle(): int
@@ -23,8 +24,7 @@ class CreateModuleCommand extends Command
         $module_slug = Str::slug($this->argument('name'));
         $module_path = base_path("docs/source_documents/modules/{$module_slug}.md");
 
-        if (File::exists($module_path))
-        {
+        if (File::exists($module_path)) {
             $this->error("Module {$module_slug} already exists!");
 
             return 1;
@@ -33,30 +33,26 @@ class CreateModuleCommand extends Command
         $files = collect($this->option('files'));
 
         // If using suggestion, get files from the module assignment log
-        if ($this->option('from-suggestion'))
-        {
-            $assignment_service = new ModuleAssignmentService();
-            $analysis           = $assignment_service->load_log();
+        if ($this->option('from-suggestion')) {
+            $assignment_service = new ModuleAssignmentService;
+            $analysis = $assignment_service->load_log();
 
             $suggested_files = $this->get_files_from_suggestion($module_slug, $analysis);
 
-            if ($suggested_files)
-            {
+            if ($suggested_files) {
                 $files = $files->merge($suggested_files);
             }
         }
 
-        if ($files->isEmpty())
-        {
+        if ($files->isEmpty()) {
             $this->warn('No files specified for the module.');
 
-            if (! $this->confirm('Create empty module?'))
-            {
+            if (! $this->confirm('Create empty module?')) {
                 return 0;
             }
         }
 
-        $title       = $this->option('title')       ?? $this->format_title($module_slug);
+        $title = $this->option('title') ?? $this->format_title($module_slug);
         $description = $this->option('description') ?? $this->ask('Enter module description');
 
         // Create the module file
@@ -69,7 +65,7 @@ class CreateModuleCommand extends Command
 
         // Update module assignment analysis
         $this->info('Updating module assignments...');
-        $assignment_service = new ModuleAssignmentService();
+        $assignment_service = new ModuleAssignmentService;
         $assignment_service->analyze_module_assignments();
 
         $this->newLine();
@@ -82,10 +78,8 @@ class CreateModuleCommand extends Command
 
     protected function get_files_from_suggestion(string $module_slug, array $analysis): ?array
     {
-        foreach ($analysis['potential_modules'] as $key => $module_info)
-        {
-            if ($module_info['suggested_name'] === $module_slug)
-            {
+        foreach ($analysis['potential_modules'] as $key => $module_info) {
+            if ($module_info['suggested_name'] === $module_slug) {
                 $this->info("Using files from suggested module: {$module_slug}");
 
                 return $module_info['files'];
@@ -108,8 +102,8 @@ class CreateModuleCommand extends Command
     protected function generate_module_content(string $slug, string $title, string $description, $files): string
     {
         $current_sha = trim(exec('git rev-parse HEAD'));
-        $timestamp   = Carbon::now()->toIso8601String();
-        $file_count  = $files->count();
+        $timestamp = Carbon::now()->toIso8601String();
+        $file_count = $files->count();
 
         $content = <<<EOT
 ---
@@ -137,17 +131,14 @@ total_files: {$file_count}
 EOT;
 
         // Group files by directory for better organization
-        $by_directory = $files->groupBy(function ($file)
-        {
+        $by_directory = $files->groupBy(function ($file) {
             return dirname($file);
         });
 
-        foreach ($by_directory as $directory => $dir_files)
-        {
-            $content .= "\n### " . $this->format_directory_name($directory) . "\n\n";
+        foreach ($by_directory as $directory => $dir_files) {
+            $content .= "\n### ".$this->format_directory_name($directory)."\n\n";
 
-            foreach ($dir_files as $file)
-            {
+            foreach ($dir_files as $file) {
                 $basename = basename($file);
                 $content .= "- **`{$file}`** - [Description needed]. This [component/service/job] ...\n\n";
             }
@@ -189,13 +180,11 @@ EOT;
 
     protected function format_directory_name(string $directory): string
     {
-        $parts            = explode('/', $directory);
+        $parts = explode('/', $directory);
         $meaningful_parts = [];
 
-        foreach ($parts as $part)
-        {
-            if (! in_array($part, ['app', 'resources', 'js', 'src']))
-            {
+        foreach ($parts as $part) {
+            if (! in_array($part, ['app', 'resources', 'js', 'src'])) {
                 $meaningful_parts[] = ucfirst($part);
             }
         }

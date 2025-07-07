@@ -7,13 +7,15 @@ use Illuminate\Support\Facades\File;
 class ModuleFileUpdater
 {
     protected ModuleMetadataService $metadataService;
+
     protected string $contentPath;
+
     protected ?string $currentSlug = null;
 
     public function __construct()
     {
-        $this->metadataService = new ModuleMetadataService();
-        $this->contentPath     = base_path(config('cascadedocs.paths.modules.content'));
+        $this->metadataService = new ModuleMetadataService;
+        $this->contentPath = base_path(config('cascadedocs.paths.modules.content'));
     }
 
     /**
@@ -47,8 +49,7 @@ class ModuleFileUpdater
     {
         $contentFile = "{$this->contentPath}/{$moduleSlug}.md";
 
-        if (! File::exists($contentFile))
-        {
+        if (! File::exists($contentFile)) {
             return null;
         }
 
@@ -130,8 +131,7 @@ class ModuleFileUpdater
      */
     public function getFileCount(): int
     {
-        if (! isset($this->currentSlug))
-        {
+        if (! isset($this->currentSlug)) {
             return 0;
         }
 

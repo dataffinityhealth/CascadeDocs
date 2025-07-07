@@ -11,7 +11,9 @@ use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 class GenerateAiDocumentationForFilamentFilesCommand extends Command
 {
     use ProviderResponseTrait;
-    protected $signature   = 'generate:ai-documentation-for-filament-files';
+
+    protected $signature = 'generate:ai-documentation-for-filament-files';
+
     protected $description = 'Generate AI documentation for Filament files in the Livewire directory';
 
     public function handle(): void
@@ -20,8 +22,7 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
 
         // Create documentation directory if it doesn't exist
         $codeDocPath = base_path(config('cascadedocs.paths.code_documentation'));
-        if (! File::exists($codeDocPath))
-        {
+        if (! File::exists($codeDocPath)) {
             File::makeDirectory($codeDocPath, config('cascadedocs.permissions.directory', 0755), true);
         }
 
@@ -30,29 +31,27 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
         $livewire_files = $this->get_files_recursively($livewirePath);
         $filament_files = $this->filter_filament_files($livewire_files);
 
-        $this->info('Found ' . count($filament_files) . ' Filament files to document.');
+        $this->info('Found '.count($filament_files).' Filament files to document.');
 
         $progress_bar = $this->output->createProgressBar(count($filament_files));
         $progress_bar->start();
 
-        foreach ($filament_files as $file_path)
-        {
+        foreach ($filament_files as $file_path) {
             // Generate documentation file path
             $relative_path = Str::after($file_path, app_path());
             $relative_path = Str::beforeLast($relative_path, '.php');
-            $doc_path      = base_path(config('cascadedocs.paths.code_documentation') . $relative_path . '.md');
+            $doc_path = base_path(config('cascadedocs.paths.code_documentation').$relative_path.'.md');
 
             // Skip if documentation already exists
-            if (File::exists($doc_path))
-            {
-                $this->line(' <info>Skipping</info> ' . $relative_path . ' (documentation already exists)');
+            if (File::exists($doc_path)) {
+                $this->line(' <info>Skipping</info> '.$relative_path.' (documentation already exists)');
                 $progress_bar->advance();
 
                 continue;
             }
 
             $file_contents = File::get($file_path);
-            $prompt        = $this->get_prompt($file_contents);
+            $prompt = $this->get_prompt($file_contents);
 
             $model = config('cascadedocs.ai.filament_model');
             $response = $this->get_response_from_provider($prompt, $model, json_mode: false);
@@ -60,8 +59,7 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
             // Create directory structure if it doesn't exist
             $doc_directory = dirname($doc_path);
 
-            if (! File::exists($doc_directory))
-            {
+            if (! File::exists($doc_directory)) {
                 File::makeDirectory($doc_directory, config('cascadedocs.permissions.directory', 0755), true);
             }
 
@@ -80,10 +78,8 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
     {
         $files = [];
 
-        foreach (File::allFiles($directory) as $file)
-        {
-            if ($file->getExtension() === 'php')
-            {
+        foreach (File::allFiles($directory) as $file) {
+            if ($file->getExtension() === 'php') {
                 $files[] = $file->getPathname();
             }
         }
@@ -95,12 +91,10 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
     {
         $filament_files = [];
 
-        foreach ($files as $file)
-        {
+        foreach ($files as $file) {
             $content = File::get($file);
 
-            if (Str::contains($content, config('cascadedocs.filament.namespace_pattern')))
-            {
+            if (Str::contains($content, config('cascadedocs.filament.namespace_pattern'))) {
                 $filament_files[] = $file;
             }
         }
@@ -110,9 +104,6 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
 
     /**
      * Generate the prompt for the AI.
-     *
-     * @param string $file_contents
-     * @return string
      */
     private function get_prompt(string $file_contents): string
     {

@@ -13,80 +13,82 @@ class GenerateArchitectureDocumentationCommand extends Command
 
     protected $signature = 'cascadedocs:generate-architecture-docs 
         {--model= : The AI model to use for generation}';
-    
+
     protected $description = 'Generate high-level architecture documentation from module summaries';
 
     public function handle()
     {
         $this->info('Starting architecture documentation generation...');
-        
+
         $model = $this->option('model') ?: config('cascadedocs.ai.default_model');
-        $metadataService = new ModuleMetadataService();
-        
+        $metadataService = new ModuleMetadataService;
+
         // Collect all module summaries
         $this->info('Collecting module summaries...');
         $modules = $this->collectModuleSummaries($metadataService);
-        
+
         if (empty($modules)) {
             $this->error('No modules found. Please generate module documentation first.');
+
             return 1;
         }
-        
-        $this->info('Found ' . count($modules) . ' modules to analyze.');
-        
+
+        $this->info('Found '.count($modules).' modules to analyze.');
+
         // Generate architecture documentation
         $this->info('Generating architecture documentation...');
-        
+
         try {
             $architectureDoc = $this->generateArchitectureDocumentation($modules, $model);
-            
+
             // Save the documentation
             $outputPath = config('cascadedocs.paths.output', 'docs/source_documents/');
-            $architecturePath = base_path($outputPath . 'architecture/');
-            
-            if (!File::exists($architecturePath)) {
+            $architecturePath = base_path($outputPath.'architecture/');
+
+            if (! File::exists($architecturePath)) {
                 File::makeDirectory($architecturePath, config('cascadedocs.permissions.directory', 0755), true);
             }
-            
-            $filePath = $architecturePath . config('cascadedocs.paths.architecture.main');
+
+            $filePath = $architecturePath.config('cascadedocs.paths.architecture.main');
             File::put($filePath, $architectureDoc);
-            
-            $this->info('✓ Architecture documentation saved to: ' . $filePath);
-            
+
+            $this->info('✓ Architecture documentation saved to: '.$filePath);
+
             // Also create a high-level summary
             $summaryDoc = $this->generateArchitectureSummary($modules, $model);
-            $summaryPath = $architecturePath . config('cascadedocs.paths.architecture.summary');
+            $summaryPath = $architecturePath.config('cascadedocs.paths.architecture.summary');
             File::put($summaryPath, $summaryDoc);
-            
-            $this->info('✓ Architecture summary saved to: ' . $summaryPath);
-            
+
+            $this->info('✓ Architecture summary saved to: '.$summaryPath);
+
         } catch (\Exception $e) {
-            $this->error('Failed to generate architecture documentation: ' . $e->getMessage());
+            $this->error('Failed to generate architecture documentation: '.$e->getMessage());
+
             return 1;
         }
-        
+
         return 0;
     }
-    
+
     protected function collectModuleSummaries(ModuleMetadataService $metadataService): array
     {
         $modules = [];
         $modulesPath = base_path(config('cascadedocs.paths.modules.metadata', 'docs/source_documents/modules/metadata/'));
-        
-        if (!File::exists($modulesPath)) {
+
+        if (! File::exists($modulesPath)) {
             return $modules;
         }
-        
+
         $metadataFiles = File::files($modulesPath);
-        
+
         foreach ($metadataFiles as $file) {
             if ($file->getExtension() !== 'json') {
                 continue;
             }
-            
+
             $moduleSlug = $file->getFilenameWithoutExtension();
             $metadata = $metadataService->loadMetadata($moduleSlug);
-            
+
             if ($metadata && isset($metadata['module_summary'])) {
                 $modules[] = [
                     'name' => $metadata['module_name'],
@@ -96,13 +98,13 @@ class GenerateArchitectureDocumentationCommand extends Command
                 ];
             }
         }
-        
+
         // Sort modules alphabetically
-        usort($modules, fn($a, $b) => strcmp($a['name'], $b['name']));
-        
+        usort($modules, fn ($a, $b) => strcmp($a['name'], $b['name']));
+
         return $modules;
     }
-    
+
     protected function generateArchitectureDocumentation(array $modules, string $model): string
     {
         $moduleSummaries = '';
@@ -111,7 +113,7 @@ class GenerateArchitectureDocumentationCommand extends Command
             $moduleSummaries .= "Files: {$module['file_count']}\n\n";
             $moduleSummaries .= $module['summary'];
         }
-        
+
         $prompt = <<<EOT
 You are creating comprehensive system architecture documentation based on module summaries.
 
@@ -157,11 +159,11 @@ EOT;
 
         return $this->get_response_from_provider($prompt, $model);
     }
-    
+
     protected function generateArchitectureSummary(array $modules, string $model): string
     {
-        $moduleList = implode("\n", array_map(fn($m) => "- {$m['name']} ({$m['file_count']} files)", $modules));
-        
+        $moduleList = implode("\n", array_map(fn ($m) => "- {$m['name']} ({$m['file_count']} files)", $modules));
+
         $prompt = <<<EOT
 Create a concise architecture summary document (1-2 pages) based on these modules:
 

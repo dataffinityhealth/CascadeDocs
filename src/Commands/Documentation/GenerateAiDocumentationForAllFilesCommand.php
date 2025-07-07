@@ -2,10 +2,10 @@
 
 namespace Lumiio\CascadeDocs\Commands\Documentation;
 
-use Lumiio\CascadeDocs\Jobs\Documentation\GenerateAiDocumentationForFileJob;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Lumiio\CascadeDocs\Jobs\Documentation\GenerateAiDocumentationForFileJob;
 
 class GenerateAiDocumentationForAllFilesCommand extends Command
 {
@@ -14,6 +14,7 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
         {--default-paths}
         {--tier=all : micro|standard|expansive|all}
         {--model=o3 : The AI model to use for generation}';
+
     protected $description = 'Generate multi-tier AI documentation for PHP files in specified directories';
 
     public function handle()
@@ -23,8 +24,7 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
         // Validate tier option
         $tier = $this->option('tier');
 
-        if (! in_array($tier, ['micro', 'standard', 'expansive', 'all']))
-        {
+        if (! in_array($tier, ['micro', 'standard', 'expansive', 'all'])) {
             $this->error('Invalid tier option. Must be one of: micro, standard, expansive, all');
 
             return;
@@ -35,15 +35,13 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
 
         // Create documentation directories if they don't exist
         $tier_directories = [
-            'short'  => base_path('docs/source_documents/short'),
+            'short' => base_path('docs/source_documents/short'),
             'medium' => base_path('docs/source_documents/medium'),
-            'full'   => base_path('docs/source_documents/full'),
+            'full' => base_path('docs/source_documents/full'),
         ];
 
-        foreach ($tier_directories as $dir)
-        {
-            if (! File::exists($dir))
-            {
+        foreach ($tier_directories as $dir) {
+            if (! File::exists($dir)) {
                 File::makeDirectory($dir, 0755, true);
             }
         }
@@ -52,44 +50,38 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
         $paths = $this->option('paths');
 
         // If --default-paths is used or no paths provided, use these defaults
-        if ($this->option('default-paths') || empty($paths))
-        {
+        if ($this->option('default-paths') || empty($paths)) {
             $paths = [
                 'app',
                 'resources/js',
             ];
         }
 
-        $this->info('Scanning the following directories: ' . implode(', ', $paths));
+        $this->info('Scanning the following directories: '.implode(', ', $paths));
 
         // Collect all PHP files from all specified paths
         $all_files = [];
 
-        foreach ($paths as $path)
-        {
+        foreach ($paths as $path) {
             $full_path = base_path($path);
 
-            if (File::exists($full_path))
-            {
-                $files     = $this->get_files_recursively($full_path);
+            if (File::exists($full_path)) {
+                $files = $this->get_files_recursively($full_path);
                 $all_files = array_merge($all_files, $files);
-                $this->info('Found ' . count($files) . " PHP files in {$path}");
-            } else
-            {
+                $this->info('Found '.count($files)." PHP files in {$path}");
+            } else {
                 $this->warn("Path not found: {$path}");
             }
         }
 
-        $this->info('Found ' . count($all_files) . ' total files to process.');
+        $this->info('Found '.count($all_files).' total files to process.');
 
         $jobs_dispatched = 0;
-        $skipped_files   = 0;
+        $skipped_files = 0;
 
-        foreach ($all_files as $file_path)
-        {
+        foreach ($all_files as $file_path) {
             // Check if documentation already exists for all requested tiers
-            if ($this->documentation_exists($file_path, $tier))
-            {
+            if ($this->documentation_exists($file_path, $tier)) {
                 $skipped_files++;
 
                 continue;
@@ -102,8 +94,7 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
 
         $this->info("Dispatched {$jobs_dispatched} documentation generation jobs.");
 
-        if ($skipped_files > 0)
-        {
+        if ($skipped_files > 0) {
             $this->info("Skipped {$skipped_files} files (documentation already exists).");
         }
 
@@ -114,12 +105,10 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
     {
         $files = [];
 
-        foreach (File::allFiles($directory) as $file)
-        {
+        foreach (File::allFiles($directory) as $file) {
             $extension = $file->getExtension();
 
-            if ($extension === 'php' || $extension === 'js' || $extension === 'vue' || $extension === 'jsx' || $extension === 'ts' || $extension === 'tsx')
-            {
+            if ($extension === 'php' || $extension === 'js' || $extension === 'vue' || $extension === 'jsx' || $extension === 'ts' || $extension === 'tsx') {
                 $files[] = $file->getPathname();
             }
         }
@@ -131,12 +120,10 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
     {
         $tiers_to_check = $tier === 'all' ? ['micro', 'standard', 'expansive'] : [$tier];
 
-        foreach ($tiers_to_check as $tier_to_check)
-        {
+        foreach ($tiers_to_check as $tier_to_check) {
             $doc_path = $this->get_tier_document_path($file_path, $tier_to_check);
 
-            if (! File::exists($doc_path))
-            {
+            if (! File::exists($doc_path)) {
                 return false;
             }
         }
@@ -147,14 +134,14 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
     private function get_tier_document_path(string $source_file_path, string $tier): string
     {
         $tier_map = [
-            'micro'     => 'short',
-            'standard'  => 'medium',
+            'micro' => 'short',
+            'standard' => 'medium',
             'expansive' => 'full',
         ];
 
-        $relative_path  = Str::after($source_file_path, base_path() . DIRECTORY_SEPARATOR);
+        $relative_path = Str::after($source_file_path, base_path().DIRECTORY_SEPARATOR);
         $file_extension = pathinfo($source_file_path, PATHINFO_EXTENSION);
-        $relative_path  = Str::beforeLast($relative_path, '.' . $file_extension);
+        $relative_path = Str::beforeLast($relative_path, '.'.$file_extension);
 
         return base_path("docs/source_documents/{$tier_map[$tier]}/{$relative_path}.md");
     }

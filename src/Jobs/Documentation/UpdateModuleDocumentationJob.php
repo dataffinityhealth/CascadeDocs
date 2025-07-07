@@ -2,8 +2,6 @@
 
 namespace Lumiio\CascadeDocs\Jobs\Documentation;
 
-use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
-use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Bus\Queueable;
@@ -13,6 +11,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
+use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
@@ -23,62 +23,58 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
-    public int $tries   = 3;
+
+    public int $tries = 3;
+
     public int $timeout = 600; // 10 minutes for module updates
 
     public function __construct(
         public string $module_slug,
         public string $to_sha,
         public string $model = 'o3'
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {
-        $metadata_service = new ModuleMetadataService();
+        $metadata_service = new ModuleMetadataService;
 
         // Check if module exists
-        if (! $metadata_service->moduleExists($this->module_slug))
-        {
+        if (! $metadata_service->moduleExists($this->module_slug)) {
             throw new Exception("Module not found: {$this->module_slug}");
         }
 
         // Get metadata first - make a working copy
-        $metadata          = $metadata_service->loadMetadata($this->module_slug);
+        $metadata = $metadata_service->loadMetadata($this->module_slug);
         $original_metadata = $metadata; // Keep original in case we need to revert
 
         // Load current module content or create placeholder
         $modulesContentPath = config('cascadedocs.paths.modules.content');
         $content_file_path = base_path("{$modulesContentPath}{$this->module_slug}.md");
-        $original_content  = null; // Store original content for rollback
+        $original_content = null; // Store original content for rollback
 
-        if (! File::exists($content_file_path))
-        {
+        if (! File::exists($content_file_path)) {
             // Create placeholder content
-            $module_name            = $metadata['module_name'];
+            $module_name = $metadata['module_name'];
             $current_module_content = "# {$module_name} Module\n\n## Overview\n\n[To be documented]\n\n## How This Module Works\n\n[To be documented]\n";
 
             // Ensure directory exists
             $contentDir = dirname($content_file_path);
 
-            if (! File::exists($contentDir))
-            {
+            if (! File::exists($contentDir)) {
                 File::makeDirectory($contentDir, 0755, true);
             }
 
             // Create the file
             File::put($content_file_path, $current_module_content);
-        } else
-        {
-            $original_content       = File::get($content_file_path);
+        } else {
+            $original_content = File::get($content_file_path);
             $current_module_content = $original_content;
         }
 
         // Check for undocumented files
         $undocumented_files = $metadata['undocumented_files'] ?? [];
 
-        if (empty($undocumented_files))
-        {
+        if (empty($undocumented_files)) {
             // No undocumented files, no update needed
             return;
         }
@@ -86,8 +82,7 @@ class UpdateModuleDocumentationJob implements ShouldQueue
         // Collect full documentation for undocumented files
         $files_documentation = $this->collect_files_documentation($undocumented_files);
 
-        if ($files_documentation->isEmpty())
-        {
+        if ($files_documentation->isEmpty()) {
             return;
         }
 
@@ -99,10 +94,9 @@ class UpdateModuleDocumentationJob implements ShouldQueue
             $files_documentation
         );
 
-        try
-        {
+        try {
             $response = $this->get_response_from_provider($prompt, $this->model);
-            
+
             // Validate response doesn't contain placeholders
             $placeholder_patterns = [
                 '/\[insert[^\]]*\]/i',
@@ -111,9 +105,9 @@ class UpdateModuleDocumentationJob implements ShouldQueue
                 '/\[add[^\]]*\]/i',
                 '/\[your[^\]]*\]/i',
                 '/\[TODO[^\]]*\]/i',
-                '/\[PLACEHOLDER[^\]]*\]/i'
+                '/\[PLACEHOLDER[^\]]*\]/i',
             ];
-            
+
             foreach ($placeholder_patterns as $pattern) {
                 if (preg_match($pattern, $response)) {
                     throw new Exception('AI response contains placeholder text. Retrying with clearer instructions.');
@@ -128,14 +122,12 @@ class UpdateModuleDocumentationJob implements ShouldQueue
             File::put($content_file_path, $response);
 
             // 2. Update metadata in memory only
-            if ($module_summary)
-            {
+            if ($module_summary) {
                 $metadata['module_summary'] = $module_summary;
             }
 
             // 3. Mark files as documented in memory
-            foreach ($undocumented_files as $file)
-            {
+            foreach ($undocumented_files as $file) {
                 // Remove from undocumented list
                 $metadata['undocumented_files'] = array_values(
                     array_diff($metadata['undocumented_files'], [$file])
@@ -144,14 +136,13 @@ class UpdateModuleDocumentationJob implements ShouldQueue
                 // Check if already in documented files
                 $exists = collect($metadata['files'])->firstWhere('path', $file);
 
-                if (! $exists)
-                {
+                if (! $exists) {
                     // Add to documented files
                     $metadata['files'][] = [
-                        'path'               => $file,
-                        'documented'         => true,
+                        'path' => $file,
+                        'documented' => true,
                         'documentation_tier' => $this->getDocumentationTier($file),
-                        'added_date'         => Carbon::now()->toIso8601String(),
+                        'added_date' => Carbon::now()->toIso8601String(),
                     ];
                 }
             }
@@ -164,11 +155,9 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
             // 6. Update the log (this is less critical)
             $this->update_module_in_log($this->module_slug);
-        } catch (ClaudeRateLimitException $e)
-        {
+        } catch (ClaudeRateLimitException $e) {
             // Restore original content if it was modified
-            if ($original_content !== null && File::exists($content_file_path))
-            {
+            if ($original_content !== null && File::exists($content_file_path)) {
                 File::put($content_file_path, $original_content);
             }
 
@@ -176,15 +165,13 @@ class UpdateModuleDocumentationJob implements ShouldQueue
             $this->release(120); // Release back to queue after 2 minutes
 
             return;
-        } catch (Exception $e)
-        {
+        } catch (Exception $e) {
             // Restore original content if it was modified
-            if ($original_content !== null && File::exists($content_file_path))
-            {
+            if ($original_content !== null && File::exists($content_file_path)) {
                 File::put($content_file_path, $original_content);
             }
 
-            throw new Exception('Failed to update module documentation: ' . $e->getMessage());
+            throw new Exception('Failed to update module documentation: '.$e->getMessage());
         }
     }
 
@@ -192,23 +179,20 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     {
         $documentation = collect();
 
-        foreach ($files as $file)
-        {
+        foreach ($files as $file) {
             // Try to find full documentation first
             $doc_path = $this->get_full_documentation_path($file);
 
-            if (! File::exists($doc_path))
-            {
+            if (! File::exists($doc_path)) {
                 // Try medium tier
                 $doc_path = $this->get_medium_documentation_path($file);
             }
 
-            if (File::exists($doc_path))
-            {
+            if (File::exists($doc_path)) {
                 $doc_content = File::get($doc_path);
 
                 $documentation->push([
-                    'path'          => $file,
+                    'path' => $file,
                     'documentation' => $doc_content,
                 ]);
             }
@@ -219,7 +203,7 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
     protected function get_full_documentation_path(string $file): string
     {
-        $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
+        $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file).'.md';
         $outputPath = config('cascadedocs.paths.output');
         $tierDir = config('cascadedocs.tiers.expansive', 'full');
 
@@ -228,7 +212,7 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
     protected function get_medium_documentation_path(string $file): string
     {
-        $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
+        $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file).'.md';
         $outputPath = config('cascadedocs.paths.output');
         $tierDir = config('cascadedocs.tiers.standard', 'medium');
 
@@ -237,11 +221,11 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
     protected function update_module_in_log(string $module_slug): void
     {
-        $diff_service = new DocumentationDiffService();
-        $log          = $diff_service->load_update_log();
+        $diff_service = new DocumentationDiffService;
+        $log = $diff_service->load_update_log();
 
         $log['modules'][$module_slug] = [
-            'sha'          => $this->to_sha,
+            'sha' => $this->to_sha,
             'last_updated' => Carbon::now()->toIso8601String(),
         ];
 
@@ -251,48 +235,42 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     protected function extract_module_summary(string $content): ?string
     {
         // Look for ## Overview section
-        if (preg_match('/^## Overview\s*\n\n(.+?)(?=\n##|\z)/sm', $content, $matches))
-        {
+        if (preg_match('/^## Overview\s*\n\n(.+?)(?=\n##|\z)/sm', $content, $matches)) {
             $overview = trim($matches[1]);
 
             // Truncate to approximately 200 words
             $words = str_word_count($overview, 1);
 
-            if (count($words) > 200)
-            {
+            if (count($words) > 200) {
                 $truncated = implode(' ', array_slice($words, 0, 200));
 
                 // Try to end on a complete sentence
-                if (preg_match('/^(.+[.!?])\s/s', $truncated, $sentence_match))
-                {
+                if (preg_match('/^(.+[.!?])\s/s', $truncated, $sentence_match)) {
                     return trim($sentence_match[1]);
                 }
 
-                return $truncated . '...';
+                return $truncated.'...';
             }
 
             return $overview;
         }
 
         // If no overview section, try to get first paragraph after title
-        if (preg_match('/^# .+?\n\n(.+?)(?=\n##|\z)/sm', $content, $matches))
-        {
+        if (preg_match('/^# .+?\n\n(.+?)(?=\n##|\z)/sm', $content, $matches)) {
             $first_paragraph = trim($matches[1]);
 
             // Truncate to approximately 200 words
             $words = str_word_count($first_paragraph, 1);
 
-            if (count($words) > 200)
-            {
+            if (count($words) > 200) {
                 $truncated = implode(' ', array_slice($words, 0, 200));
 
                 // Try to end on a complete sentence
-                if (preg_match('/^(.+[.!?])\s/s', $truncated, $sentence_match))
-                {
+                if (preg_match('/^(.+[.!?])\s/s', $truncated, $sentence_match)) {
                     return trim($sentence_match[1]);
                 }
 
-                return $truncated . '...';
+                return $truncated.'...';
             }
 
             return $first_paragraph;
@@ -306,15 +284,13 @@ class UpdateModuleDocumentationJob implements ShouldQueue
         $tiers = config('cascadedocs.tier_directories', ['full', 'medium', 'short']);
 
         // Remove extension and add .md
-        $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
+        $doc_file = preg_replace('/\.(php|js|blade\.php)$/', '', $file).'.md';
         $outputPath = config('cascadedocs.paths.output');
 
-        foreach ($tiers as $tier)
-        {
+        foreach ($tiers as $tier) {
             $doc_path = base_path("{$outputPath}{$tier}/{$doc_file}");
 
-            if (File::exists($doc_path))
-            {
+            if (File::exists($doc_path)) {
                 return $tier;
             }
         }
@@ -330,8 +306,7 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     ): string {
         $files_section = '';
 
-        foreach ($files_documentation as $file_info)
-        {
+        foreach ($files_documentation as $file_info) {
             $files_section .= "\n\n## File: {$file_info['path']}\n\n{$file_info['documentation']}";
         }
 

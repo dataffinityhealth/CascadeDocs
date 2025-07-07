@@ -21,7 +21,9 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
+
     public int $tries;
+
     public int $timeout;
 
     public function __construct(
@@ -40,60 +42,51 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         $tiers_to_check = $this->tier === 'all' ? config('cascadedocs.tier_names') : [$this->tier];
         $existing_tiers = [];
 
-        foreach ($tiers_to_check as $tier_to_check)
-        {
+        foreach ($tiers_to_check as $tier_to_check) {
             $doc_path = $this->get_tier_document_path($this->file_path, $tier_to_check);
 
-            if (File::exists($doc_path))
-            {
+            if (File::exists($doc_path)) {
                 $existing_tiers[] = $tier_to_check;
             }
         }
 
         // Skip if all requested tiers already exist
-        if (count($existing_tiers) === count($tiers_to_check))
-        {
+        if (count($existing_tiers) === count($tiers_to_check)) {
             return;
         }
 
-        $class_name     = basename($this->file_path, '.php');
-        $commit_sha     = trim(exec('git rev-parse HEAD'));
-        $file_contents  = File::get($this->file_path);
+        $class_name = basename($this->file_path, '.php');
+        $commit_sha = trim(exec('git rev-parse HEAD'));
+        $file_contents = File::get($this->file_path);
         $file_extension = pathinfo($this->file_path, PATHINFO_EXTENSION);
-        $relative_path  = Str::after($this->file_path, base_path() . DIRECTORY_SEPARATOR);
+        $relative_path = Str::after($this->file_path, base_path().DIRECTORY_SEPARATOR);
 
         // Get all three tiers in one LLM call
         $prompt = $this->get_unified_prompt($file_contents, $file_extension, $class_name, $relative_path, $commit_sha);
 
-        try
-        {
-            $response      = $this->get_response_from_provider($prompt, $this->model, json_mode: true);
+        try {
+            $response = $this->get_response_from_provider($prompt, $this->model, json_mode: true);
             $documentation = json_decode($response, true);
 
-            if (! $documentation || ! is_array($documentation))
-            {
+            if (! $documentation || ! is_array($documentation)) {
                 throw new Exception('Invalid JSON response from LLM');
             }
-            
+
             // Validate response for truncation
             $this->validateResponseForTruncation($documentation);
-        } catch (ClaudeRateLimitException $e)
-        {
+        } catch (ClaudeRateLimitException $e) {
             // Let the job retry automatically
             $this->release(config('cascadedocs.queue.rate_limit_delay', 60)); // Release back to queue
 
             return;
-        } catch (Exception $e)
-        {
-            throw new Exception('Failed to generate documentation: ' . $e->getMessage());
+        } catch (Exception $e) {
+            throw new Exception('Failed to generate documentation: '.$e->getMessage());
         }
 
         $tiers_to_save = $this->tier === 'all' ? config('cascadedocs.tier_names') : [$this->tier];
 
-        foreach ($tiers_to_save as $current_tier)
-        {
-            if (isset($documentation[$current_tier]))
-            {
+        foreach ($tiers_to_save as $current_tier) {
+            if (isset($documentation[$current_tier])) {
                 $doc_path = $this->get_tier_document_path($this->file_path, $current_tier);
                 $this->write_documentation_file($doc_path, $documentation[$current_tier]);
             }
@@ -104,11 +97,12 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     {
         $tier_map = config('cascadedocs.tiers');
 
-        $relative_path  = Str::after($source_file_path, base_path() . DIRECTORY_SEPARATOR);
+        $relative_path = Str::after($source_file_path, base_path().DIRECTORY_SEPARATOR);
         $file_extension = pathinfo($source_file_path, PATHINFO_EXTENSION);
-        $relative_path  = Str::beforeLast($relative_path, '.' . $file_extension);
+        $relative_path = Str::beforeLast($relative_path, '.'.$file_extension);
 
         $outputPath = config('cascadedocs.paths.output');
+
         return base_path("{$outputPath}{$tier_map[$tier]}/{$relative_path}.md");
     }
 
@@ -116,8 +110,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     {
         $doc_directory = dirname($doc_path);
 
-        if (! File::exists($doc_directory))
-        {
+        if (! File::exists($doc_directory)) {
             File::makeDirectory($doc_directory, config('cascadedocs.permissions.directory', 0755), true);
         }
 
@@ -134,36 +127,36 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
             '/\[.*insert.*\]/i',
             '/\[.*placeholder.*\]/i',
         ];
-        
+
         $minLengths = [
             'micro' => 50,
             'standard' => 200,
-            'expansive' => 500
+            'expansive' => 500,
         ];
-        
+
         foreach ($documentation as $tier => $content) {
-            if (!in_array($tier, config('cascadedocs.tier_names'))) {
+            if (! in_array($tier, config('cascadedocs.tier_names'))) {
                 continue;
             }
-            
+
             // Check for truncation patterns
             foreach ($truncationPatterns as $pattern) {
                 if (preg_match($pattern, $content)) {
                     throw new Exception("Documentation appears to contain placeholders or be truncated for tier: {$tier}");
                 }
             }
-            
+
             // Check minimum content length
             if (strlen($content) < ($minLengths[$tier] ?? 50)) {
-                throw new Exception("Documentation appears too short for tier: {$tier} (length: " . strlen($content) . ")");
+                throw new Exception("Documentation appears too short for tier: {$tier} (length: ".strlen($content).')');
             }
-            
+
             // Check if content ends abruptly
             $trimmedContent = trim($content);
             if (preg_match('/[a-zA-Z0-9]$/', $trimmedContent)) {
                 // Content ends with alphanumeric character without punctuation - might be truncated
                 $lastLine = substr($trimmedContent, -100);
-                if (!preg_match('/[.!?]/', $lastLine)) {
+                if (! preg_match('/[.!?]/', $lastLine)) {
                     throw new Exception("Documentation may be truncated - no sentence ending found in tier: {$tier}");
                 }
             }
@@ -173,7 +166,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     private function get_unified_prompt(string $file_contents, string $file_extension, string $class_name, string $source_path, string $commit_sha): string
     {
         $language_code_block = $file_extension === 'php' ? 'php' : 'javascript';
-        $current_date        = Carbon::now()->format('Y-m-d');
+        $current_date = Carbon::now()->format('Y-m-d');
 
         return <<<EOT
 You are an expert technical writer specializing in PHP/Laravel documentation.

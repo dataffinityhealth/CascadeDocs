@@ -10,12 +10,13 @@ use Illuminate\Support\Facades\File;
 class ModuleMetadataService
 {
     protected string $metadataPath;
+
     protected string $contentPath;
 
     public function __construct()
     {
         $this->metadataPath = base_path(config('cascadedocs.paths.modules.metadata'));
-        $this->contentPath  = base_path(config('cascadedocs.paths.modules.content'));
+        $this->contentPath = base_path(config('cascadedocs.paths.modules.content'));
     }
 
     /**
@@ -25,8 +26,7 @@ class ModuleMetadataService
     {
         $metadataFile = "{$this->metadataPath}/{$moduleSlug}.json";
 
-        if (! File::exists($metadataFile))
-        {
+        if (! File::exists($metadataFile)) {
             return null;
         }
 
@@ -41,7 +41,7 @@ class ModuleMetadataService
         $metadataFile = "{$this->metadataPath}/{$moduleSlug}.json";
 
         // Ensure statistics are up to date
-        $metadata['statistics']   = $this->calculateStatistics($metadata);
+        $metadata['statistics'] = $this->calculateStatistics($metadata);
         $metadata['last_updated'] = Carbon::now()->toIso8601String();
 
         File::put($metadataFile, json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -54,36 +54,30 @@ class ModuleMetadataService
     {
         $metadata = $this->loadMetadata($moduleSlug);
 
-        if (! $metadata)
-        {
+        if (! $metadata) {
             throw new Exception("Module not found: {$moduleSlug}");
         }
 
         // Get existing file paths
         $existingPaths = collect($metadata['files'])->pluck('path')->toArray();
 
-        foreach ($files as $file)
-        {
+        foreach ($files as $file) {
             // Skip if file already exists
-            if (in_array($file, $existingPaths))
-            {
+            if (in_array($file, $existingPaths)) {
                 continue;
             }
 
             // Add to appropriate list
-            if ($documented)
-            {
+            if ($documented) {
                 $metadata['files'][] = [
-                    'path'               => $file,
-                    'documented'         => true,
+                    'path' => $file,
+                    'documented' => true,
                     'documentation_tier' => $this->getDocumentationTier($file),
-                    'added_date'         => Carbon::now()->toIso8601String(),
+                    'added_date' => Carbon::now()->toIso8601String(),
                 ];
-            } else
-            {
+            } else {
                 // Add to undocumented files if not already there
-                if (! in_array($file, $metadata['undocumented_files']))
-                {
+                if (! in_array($file, $metadata['undocumented_files'])) {
                     $metadata['undocumented_files'][] = $file;
                 }
             }
@@ -101,8 +95,7 @@ class ModuleMetadataService
     {
         $metadata = $this->loadMetadata($moduleSlug);
 
-        if (! $metadata)
-        {
+        if (! $metadata) {
             throw new Exception("Module not found: {$moduleSlug}");
         }
 
@@ -129,13 +122,11 @@ class ModuleMetadataService
     {
         $metadata = $this->loadMetadata($moduleSlug);
 
-        if (! $metadata)
-        {
+        if (! $metadata) {
             throw new Exception("Module not found: {$moduleSlug}");
         }
 
-        foreach ($files as $file)
-        {
+        foreach ($files as $file) {
             // Remove from undocumented list
             $metadata['undocumented_files'] = array_values(
                 array_diff($metadata['undocumented_files'], [$file])
@@ -144,14 +135,13 @@ class ModuleMetadataService
             // Check if already in documented files
             $exists = collect($metadata['files'])->firstWhere('path', $file);
 
-            if (! $exists)
-            {
+            if (! $exists) {
                 // Add to documented files
                 $metadata['files'][] = [
-                    'path'               => $file,
-                    'documented'         => true,
+                    'path' => $file,
+                    'documented' => true,
                     'documentation_tier' => $this->getDocumentationTier($file),
-                    'added_date'         => Carbon::now()->toIso8601String(),
+                    'added_date' => Carbon::now()->toIso8601String(),
                 ];
             }
         }
@@ -168,8 +158,7 @@ class ModuleMetadataService
     {
         $metadata = $this->loadMetadata($moduleSlug);
 
-        if (! $metadata)
-        {
+        if (! $metadata) {
             throw new Exception("Module not found: {$moduleSlug}");
         }
 
@@ -186,32 +175,27 @@ class ModuleMetadataService
     {
         $metadata = $this->loadMetadata($moduleSlug);
 
-        if (! $metadata)
-        {
+        if (! $metadata) {
             throw new Exception("Module not found: {$moduleSlug}");
         }
 
         // Find and remove from documented files
         $fileIndex = null;
 
-        foreach ($metadata['files'] as $index => $file)
-        {
-            if ($file['path'] === $filePath)
-            {
+        foreach ($metadata['files'] as $index => $file) {
+            if ($file['path'] === $filePath) {
                 $fileIndex = $index;
 
                 break;
             }
         }
 
-        if ($fileIndex !== null)
-        {
+        if ($fileIndex !== null) {
             // Remove from documented files
             array_splice($metadata['files'], $fileIndex, 1);
 
             // Add to undocumented files if not already there
-            if (! in_array($filePath, $metadata['undocumented_files']))
-            {
+            if (! in_array($filePath, $metadata['undocumented_files'])) {
                 $metadata['undocumented_files'][] = $filePath;
             }
 
@@ -227,18 +211,18 @@ class ModuleMetadataService
         $slug = $moduleData['slug'];
 
         $metadata = [
-            'module_name'        => $moduleData['name'],
-            'module_slug'        => $slug,
-            'module_summary'     => '', // Empty until documentation is generated
-            'doc_version'        => '1.0',
-            'generated_at'       => Carbon::now()->toIso8601String(),
-            'last_updated'       => Carbon::now()->toIso8601String(),
-            'git_commit_sha'     => $this->getCurrentGitCommit(),
-            'files'              => [],
+            'module_name' => $moduleData['name'],
+            'module_slug' => $slug,
+            'module_summary' => '', // Empty until documentation is generated
+            'doc_version' => '1.0',
+            'generated_at' => Carbon::now()->toIso8601String(),
+            'last_updated' => Carbon::now()->toIso8601String(),
+            'git_commit_sha' => $this->getCurrentGitCommit(),
+            'files' => [],
             'undocumented_files' => $moduleData['files'] ?? [],
-            'statistics'         => [
-                'total_files'        => count($moduleData['files'] ?? []),
-                'documented_files'   => 0,
+            'statistics' => [
+                'total_files' => count($moduleData['files'] ?? []),
+                'documented_files' => 0,
                 'undocumented_files' => count($moduleData['files'] ?? []),
             ],
         ];
@@ -247,7 +231,7 @@ class ModuleMetadataService
 
         // Create empty content file
         $contentFile = "{$this->contentPath}/{$slug}.md";
-        $content     = "# {$moduleData['name']} Module\n\n## Overview\n\n{$moduleData['description']}\n\n## How This Module Works\n\n[To be documented]\n";
+        $content = "# {$moduleData['name']} Module\n\n## Overview\n\n{$moduleData['description']}\n\n## How This Module Works\n\n[To be documented]\n";
 
         File::put($contentFile, $content);
     }
@@ -271,12 +255,11 @@ class ModuleMetadataService
     {
         $metadata = $this->loadMetadata($moduleSlug);
 
-        if (! $metadata)
-        {
+        if (! $metadata) {
             return [];
         }
 
-        $documentedFiles   = collect($metadata['files'])->pluck('path')->toArray();
+        $documentedFiles = collect($metadata['files'])->pluck('path')->toArray();
         $undocumentedFiles = $metadata['undocumented_files'] ?? [];
 
         return array_unique(array_merge($documentedFiles, $undocumentedFiles));
@@ -295,12 +278,12 @@ class ModuleMetadataService
      */
     protected function calculateStatistics(array $metadata): array
     {
-        $documentedCount   = count($metadata['files'] ?? []);
+        $documentedCount = count($metadata['files'] ?? []);
         $undocumentedCount = count($metadata['undocumented_files'] ?? []);
 
         return [
-            'total_files'        => $documentedCount + $undocumentedCount,
-            'documented_files'   => $documentedCount,
+            'total_files' => $documentedCount + $undocumentedCount,
+            'documented_files' => $documentedCount,
             'undocumented_files' => $undocumentedCount,
         ];
     }
@@ -313,15 +296,13 @@ class ModuleMetadataService
         $tiers = config('cascadedocs.tier_directories', ['full', 'medium', 'short']);
 
         // Remove extension and add .md
-        $docFile = preg_replace('/\.(php|js|blade\.php)$/', '', $file) . '.md';
+        $docFile = preg_replace('/\.(php|js|blade\.php)$/', '', $file).'.md';
 
-        foreach ($tiers as $tier)
-        {
+        foreach ($tiers as $tier) {
             $outputPath = config('cascadedocs.paths.output');
             $docPath = base_path("{$outputPath}{$tier}/{$docFile}");
 
-            if (File::exists($docPath))
-            {
+            if (File::exists($docPath)) {
                 return $tier;
             }
         }

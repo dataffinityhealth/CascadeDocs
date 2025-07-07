@@ -12,19 +12,19 @@ return [
     'paths' => [
         // Directories to scan for source files
         'source' => env('CASCADEDOCS_SOURCE_PATHS', ['app/', 'resources/js/']),
-        
+
         // Base output directory for documentation
         'output' => env('CASCADEDOCS_OUTPUT_PATH', 'docs/source_documents/'),
-        
+
         // Log directory
         'logs' => env('CASCADEDOCS_LOGS_PATH', 'docs/'),
-        
+
         // Module-specific paths
         'modules' => [
             'content' => env('CASCADEDOCS_MODULE_CONTENT_PATH', 'docs/source_documents/modules/content/'),
             'metadata' => env('CASCADEDOCS_MODULE_METADATA_PATH', 'docs/source_documents/modules/metadata/'),
         ],
-        
+
         // Log and tracking files
         'tracking' => [
             'module_assignment' => 'docs/module-assignment-log.json',
@@ -32,7 +32,7 @@ return [
             'feedback' => 'docs/module-assignment-feedback.txt',
             'generated_prompt' => 'docs/generated-assignment-prompt.md',
         ],
-        
+
         // Other documentation paths
         'code_documentation' => 'docs/code_documentation',
         'architecture' => [
@@ -50,7 +50,7 @@ return [
     |
     */
     'file_types' => env('CASCADEDOCS_FILE_TYPES', ['php', 'js', 'vue', 'jsx', 'ts', 'tsx']),
-    
+
     // File extensions grouped by type
     'file_extensions' => [
         'php' => ['php'],
@@ -87,7 +87,7 @@ return [
         'standard' => 'medium',
         'expansive' => 'full',
     ],
-    
+
     // Array format for tier names
     'tier_names' => ['micro', 'standard', 'expansive'],
     'tier_directories' => ['short', 'medium', 'full'],
@@ -143,7 +143,7 @@ return [
             '*Seeder.php',
         ],
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Excluded Namespace Parts
@@ -153,9 +153,9 @@ return [
     |
     */
     'excluded_namespace_parts' => [
-        'app', 'resources', 'js', 'php', 'src'
+        'app', 'resources', 'js', 'php', 'src',
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Processing Limits and Thresholds
@@ -172,7 +172,7 @@ return [
             'system_overview' => ['min' => 200, 'max' => 300],
             'executive_summary' => ['min' => 100, 'max' => 150],
         ],
-        
+
         // Module detection thresholds
         'module_detection' => [
             'min_files_for_module' => 3,
@@ -183,7 +183,7 @@ return [
             'confidence_divisor' => 10,
             'max_confidence' => 1.0,
         ],
-        
+
         // File size limits
         'max_file_size' => env('CASCADEDOCS_MAX_FILE_SIZE', 50000), // 50KB
     ],
@@ -200,7 +200,7 @@ return [
         'auto_assign' => env('CASCADEDOCS_AUTO_ASSIGN_MODULES', true),
         'default_confidence_threshold' => 0.7,
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | File System Permissions
@@ -213,7 +213,7 @@ return [
         'directory' => 0755,
         'file' => 0644,
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Filament-Specific Configuration

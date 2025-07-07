@@ -2,16 +2,17 @@
 
 namespace Lumiio\CascadeDocs\Tests\Feature\Jobs\Documentation;
 
-use Lumiio\CascadeDocs\Jobs\Documentation\GenerateAiDocumentationForFileJob;
 use Exception;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
-use PHPUnit\Framework\Attributes\Test;
+use Lumiio\CascadeDocs\Jobs\Documentation\GenerateAiDocumentationForFileJob;
 use Lumiio\CascadeDocs\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class GenerateAiDocumentationForFileJobTest extends TestCase
 {
     protected string $test_file_path;
+
     protected string $test_file_content;
 
     protected function setUp(): void
@@ -19,7 +20,7 @@ class GenerateAiDocumentationForFileJobTest extends TestCase
         parent::setUp();
 
         // Create a test file
-        $this->test_file_path    = base_path('app/TestClass.php');
+        $this->test_file_path = base_path('app/TestClass.php');
         $this->test_file_content = <<<'PHP'
 <?php
 
@@ -43,8 +44,7 @@ PHP;
     protected function tearDown(): void
     {
         // Clean up test file
-        if (File::exists($this->test_file_path))
-        {
+        if (File::exists($this->test_file_path)) {
             File::delete($this->test_file_path);
         }
 
@@ -123,7 +123,7 @@ PHP;
             '*' => Http::response([
                 'error' => [
                     'message' => 'Rate limit exceeded',
-                    'type'    => 'rate_limit_error',
+                    'type' => 'rate_limit_error',
                 ],
             ], 429),
         ]);
@@ -132,12 +132,10 @@ PHP;
         $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'micro', 'o3');
 
         // The job should handle the error
-        try
-        {
+        try {
             $job->handle();
             $this->fail('Expected exception was not thrown');
-        } catch (Exception $e)
-        {
+        } catch (Exception $e) {
             // The job should throw an exception for the rate limit
             $this->assertStringContainsString('Failed to generate documentation', $e->getMessage());
         }
@@ -148,7 +146,7 @@ PHP;
     {
         // Given we have a file in a nested directory
         $nested_file_path = base_path('app/Services/Nested/TestService.php');
-        $nested_content   = <<<'PHP'
+        $nested_content = <<<'PHP'
 <?php
 
 namespace App\Services\Nested;
@@ -182,15 +180,13 @@ PHP;
         File::deleteDirectory(base_path('app/Services/Nested'));
 
         // Only delete the specific nested test documentation
-        if (File::exists(base_path('docs/source_documents/short/app/Services/Nested/TestService.md')))
-        {
+        if (File::exists(base_path('docs/source_documents/short/app/Services/Nested/TestService.md'))) {
             File::delete(base_path('docs/source_documents/short/app/Services/Nested/TestService.md'));
         }
         // Remove the directory only if it's empty
         $nested_doc_dir = base_path('docs/source_documents/short/app/Services/Nested');
 
-        if (File::isDirectory($nested_doc_dir) && count(File::files($nested_doc_dir)) === 0)
-        {
+        if (File::isDirectory($nested_doc_dir) && count(File::files($nested_doc_dir)) === 0) {
             File::deleteDirectory($nested_doc_dir);
         }
     }
@@ -200,7 +196,7 @@ PHP;
     {
         // Given we have a JavaScript file
         $js_file_path = base_path('resources/js/test.js');
-        $js_content   = <<<'JS'
+        $js_content = <<<'JS'
 export function testFunction() {
     return 'test';
 }
@@ -223,8 +219,7 @@ JS;
         File::delete($js_file_path);
 
         // Only delete the specific test documentation file
-        if (File::exists(base_path('docs/source_documents/short/resources/js/test.md')))
-        {
+        if (File::exists(base_path('docs/source_documents/short/resources/js/test.md'))) {
             File::delete(base_path('docs/source_documents/short/resources/js/test.md'));
         }
     }
@@ -257,8 +252,8 @@ JS;
                 [
                     'message' => [
                         'content' => json_encode([
-                            'micro'     => "## TestClass · Micro-blurb\n\nThis is a test class that demonstrates basic functionality.",
-                            'standard'  => "```yaml\ndoc_tier: standard\ndoc_version: 1\n```\n\n# TestClass\n\n## Purpose\nTest class for documentation generation.",
+                            'micro' => "## TestClass · Micro-blurb\n\nThis is a test class that demonstrates basic functionality.",
+                            'standard' => "```yaml\ndoc_tier: standard\ndoc_version: 1\n```\n\n# TestClass\n\n## Purpose\nTest class for documentation generation.",
                             'expansive' => "```yaml\ndoc_tier: expansive\ndoc_version: 1\n```\n\n# TestClass\n\n## File Purpose\nComprehensive test class documentation.",
                         ]),
                     ],
@@ -271,13 +266,12 @@ JS;
     private function create_existing_documentation(): void
     {
         $tiers = [
-            'short'  => "## TestClass · Micro-blurb\n\nExisting documentation.",
+            'short' => "## TestClass · Micro-blurb\n\nExisting documentation.",
             'medium' => "# TestClass\n\nExisting standard documentation.",
-            'full'   => "# TestClass\n\nExisting expansive documentation.",
+            'full' => "# TestClass\n\nExisting expansive documentation.",
         ];
 
-        foreach ($tiers as $tier => $content)
-        {
+        foreach ($tiers as $tier => $content) {
             $path = base_path("docs/source_documents/{$tier}/app/TestClass.md");
             File::ensureDirectoryExists(dirname($path));
             File::put($path, $content);
@@ -292,10 +286,8 @@ JS;
             base_path('docs/source_documents/full/app/TestClass.md'),
         ];
 
-        foreach ($paths as $path)
-        {
-            if (File::exists($path))
-            {
+        foreach ($paths as $path) {
+            if (File::exists($path)) {
                 File::delete($path);
             }
         }
