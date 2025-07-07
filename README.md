@@ -150,10 +150,10 @@ php artisan cascadedocs:generate-class-docs --model=gpt-4
 php artisan cascadedocs:generate-module-docs
 
 # Individual module commands
-php artisan documentation:module:create "User Management"
-php artisan documentation:module:assign --force
-php artisan documentation:module:update-all
-php artisan documentation:module:status
+php artisan documentation:create-module "User Management"
+php artisan documentation:assign-files-to-modules --force
+php artisan documentation:update-all-modules
+php artisan documentation:module-status
 ```
 
 ### Generate Architecture Documentation

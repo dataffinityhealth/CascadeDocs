@@ -90,8 +90,8 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                 throw new Exception('Invalid JSON response from LLM');
             }
 
-            // Validate response for truncation - now just logs warnings
-            $this->validateResponseForTruncation($documentation);
+            // Validate response by comparing length with existing documentation
+            $this->validateDocumentationLength($documentation);
         } catch (ClaudeRateLimitException $e) {
             // Let the job retry automatically
             $this->release(config('cascadedocs.queue.rate_limit_delay', 60)); // Release back to queue
@@ -161,94 +161,60 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         File::put($doc_path, $content);
     }
 
-    private function validateResponseForTruncation(array $documentation): void
+    private function validateDocumentationLength(array $documentation): void
     {
-        $truncationPatterns = [
-            '/\.\.\.$/',
-            '/\[truncated\]/i',
-            '/\[.*to be added.*\]/i',
-            '/\[.*details here.*\]/i',
-            '/\[.*insert.*\]/i',
-            '/\[.*placeholder.*\]/i',
-            '/\[.*TODO.*\]/i',
-        ];
-
-        $minLengths = [
-            'micro' => 30,      // Reduced from 50
-            'standard' => 100,  // Reduced from 200
-            'expansive' => 300, // Reduced from 500
-        ];
-
         $warnings = [];
+        $threshold = 0.05; // 5% threshold
 
-        foreach ($documentation as $tier => $content) {
+        foreach ($documentation as $tier => $newContent) {
             if (! in_array($tier, config('cascadedocs.tier_names'))) {
                 continue;
             }
 
-            // Check for truncation patterns
-            foreach ($truncationPatterns as $pattern) {
-                if (preg_match($pattern, $content, $matches)) {
-                    $warnings[] = "Tier {$tier} contains potential placeholder: {$matches[0]}";
-                    Log::warning('CascadeDocs: Potential placeholder detected', [
-                        'file' => $this->file_path,
-                        'tier' => $tier,
-                        'pattern' => $pattern,
-                        'match' => $matches[0],
-                        'content_preview' => substr($content, max(0, strpos($content, $matches[0]) - 50), 200),
-                    ]);
+            // Get the path for the existing documentation
+            $existingDocPath = $this->get_tier_document_path($this->file_path, $tier);
+            
+            // Check if existing documentation exists
+            if (File::exists($existingDocPath)) {
+                $existingContent = File::get($existingDocPath);
+                $existingLength = strlen($existingContent);
+                $newLength = strlen($newContent);
+                
+                // Calculate the percentage difference
+                if ($existingLength > 0) {
+                    $percentageReduction = ($existingLength - $newLength) / $existingLength;
+                    
+                    if ($percentageReduction > $threshold) {
+                        $warnings[] = sprintf(
+                            "Tier %s documentation is %.1f%% shorter than existing (was %d chars, now %d chars)",
+                            $tier,
+                            $percentageReduction * 100,
+                            $existingLength,
+                            $newLength
+                        );
+                        
+                        Log::warning('CascadeDocs: New documentation is significantly shorter', [
+                            'file' => $this->file_path,
+                            'tier' => $tier,
+                            'existing_length' => $existingLength,
+                            'new_length' => $newLength,
+                            'reduction_percentage' => round($percentageReduction * 100, 2),
+                            'threshold_percentage' => $threshold * 100,
+                        ]);
+                    }
                 }
-            }
-
-            // Check minimum content length
-            if (strlen($content) < ($minLengths[$tier] ?? 30)) {
-                $warnings[] = "Tier {$tier} seems short (length: ".strlen($content).')';
-                Log::warning('CascadeDocs: Documentation seems short', [
-                    'file' => $this->file_path,
-                    'tier' => $tier,
-                    'length' => strlen($content),
-                    'expected_min' => $minLengths[$tier] ?? 30,
-                    'content_preview' => substr($content, 0, 100),
-                ]);
-            }
-
-            // Only check for obvious truncation indicators
-            $trimmedContent = trim($content);
-
-            // Check if it ends with incomplete markdown or code block
-            if (preg_match('/```[^`]*$/', $trimmedContent)) {
-                $warnings[] = "Tier {$tier} ends with incomplete code block";
-                Log::warning('CascadeDocs: Potential truncation - incomplete code block', [
-                    'file' => $this->file_path,
-                    'tier' => $tier,
-                    'ending' => substr($trimmedContent, -100),
-                ]);
-            } elseif (preg_match('/`[^`]$/', $trimmedContent)) {
-                $warnings[] = "Tier {$tier} ends with incomplete inline code";
-                Log::warning('CascadeDocs: Potential truncation - incomplete inline code', [
-                    'file' => $this->file_path,
-                    'tier' => $tier,
-                    'ending' => substr($trimmedContent, -50),
-                ]);
-            } elseif (preg_match('/\|\s*$/', $trimmedContent)) {
-                $warnings[] = "Tier {$tier} ends with incomplete table";
-                Log::warning('CascadeDocs: Potential truncation - incomplete table', [
-                    'file' => $this->file_path,
-                    'tier' => $tier,
-                    'ending' => substr($trimmedContent, -100),
-                ]);
             }
         }
 
         // Log a summary if there were any warnings
         if (! empty($warnings)) {
-            Log::info('CascadeDocs: Documentation validation warnings', [
+            Log::info('CascadeDocs: Documentation length validation warnings', [
                 'file' => $this->file_path,
                 'warnings' => $warnings,
                 'note' => 'Documentation was still saved despite warnings',
             ]);
         } else {
-            Log::info('CascadeDocs: Documentation validation passed', [
+            Log::info('CascadeDocs: Documentation length validation passed', [
                 'file' => $this->file_path,
             ]);
         }
