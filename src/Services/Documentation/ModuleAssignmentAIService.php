@@ -5,9 +5,12 @@ namespace Lumiio\CascadeDocs\Services\Documentation;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
 class ModuleAssignmentAIService extends ModuleAssignmentService
 {
+    use ProviderResponseTrait;
+
     protected DocumentationParser $parser;
 
     public function __construct()
@@ -757,19 +760,28 @@ EOT;
      */
     protected function getAIModuleRecommendations(string $prompt): array
     {
-        $aiService = app(\Shawnveltman\LaravelOpenai\OpenAiService::class);
         $model = config('cascadedocs.ai.default_model', 'gpt-4o');
 
         try {
-            $response = $aiService->generate_response_from_prompt(
-                prompt: $prompt,
-                model: $model,
-                max_tokens: 8000,
-                temperature: 0.3,
+            // Add system prompt for better JSON response
+            $systemPrompt = 'You are a module organization assistant for a healthcare platform. You analyze files and create logical module groupings. Always respond with valid JSON only, no markdown code blocks or extra text.';
+
+            $fullPrompt = $systemPrompt."\n\n".$prompt;
+
+            // Use the trait method to get response
+            $response = $this->get_response_from_provider(
+                $fullPrompt,
+                $model,
                 json_mode: true
             );
 
-            return json_decode($response, true);
+            $result = json_decode($response, true);
+
+            if (! $result || ! isset($result['modules'])) {
+                throw new \Exception('Invalid response format from AI service');
+            }
+
+            return $result;
         } catch (\Exception $e) {
             throw new \Exception('Failed to get AI module recommendations: '.$e->getMessage());
         }
