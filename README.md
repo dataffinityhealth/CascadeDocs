@@ -32,7 +32,26 @@ You can install the package via composer:
 composer require lumiio/cascadedocs
 ```
 
-Publish the configuration file:
+### Required: Install AI Provider Package
+
+CascadeDocs uses the `shawnveltman/laravel-openai` package for AI integration. You must publish its configuration:
+
+```bash
+php artisan vendor:publish --provider="Shawnveltman\LaravelOpenai\LaravelOpenaiServiceProvider"
+```
+
+This will create a `config/openai.php` file. Configure your AI provider credentials in your `.env` file:
+
+```bash
+# For OpenAI
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_ORGANIZATION=your-org-id # Optional
+
+# For Claude/Anthropic
+ANTHROPIC_API_KEY=your-anthropic-api-key
+```
+
+### Publish CascadeDocs Configuration
 
 ```bash
 php artisan vendor:publish --tag="cascadedocs-config"
@@ -201,15 +220,22 @@ docs/source_documents/
 
 ### AI Provider Setup
 
-Make sure you have configured your AI provider credentials:
+Make sure you have:
 
-```bash
-# For OpenAI
-OPENAI_API_KEY=your-api-key
+1. Published the AI provider configuration:
+   ```bash
+   php artisan vendor:publish --provider="Shawnveltman\LaravelOpenai\LaravelOpenaiServiceProvider"
+   ```
 
-# For Claude/Anthropic
-ANTHROPIC_API_KEY=your-api-key
-```
+2. Configured your AI provider credentials in `.env`:
+   ```bash
+   # For OpenAI
+   OPENAI_API_KEY=your-api-key
+   OPENAI_ORGANIZATION=your-org-id # Optional
+   
+   # For Claude/Anthropic
+   ANTHROPIC_API_KEY=your-api-key
+   ```
 
 ### Queue Configuration
 
