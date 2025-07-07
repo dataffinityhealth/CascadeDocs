@@ -64,6 +64,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                 'file' => $this->file_path,
                 'existing_tiers' => $existing_tiers,
             ]);
+
             return;
         }
 
@@ -111,7 +112,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                     $written_files[] = $doc_path;
                 }
             }
-            
+
             // Log successful completion
             Log::info('CascadeDocs: Documentation generation completed successfully', [
                 'file' => $this->file_path,
@@ -125,13 +126,13 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                     File::delete($file_path);
                 }
             }
-            
+
             Log::error('CascadeDocs: Failed to write documentation files', [
                 'file' => $this->file_path,
                 'error' => $e->getMessage(),
                 'files_rolled_back' => count($written_files),
             ]);
-            
+
             throw $e;
         }
     }
@@ -240,7 +241,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
         }
 
         // Log a summary if there were any warnings
-        if (!empty($warnings)) {
+        if (! empty($warnings)) {
             Log::info('CascadeDocs: Documentation validation warnings', [
                 'file' => $this->file_path,
                 'warnings' => $warnings,
