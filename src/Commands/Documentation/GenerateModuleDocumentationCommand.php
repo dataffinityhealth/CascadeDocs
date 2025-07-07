@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 class GenerateModuleDocumentationCommand extends Command
 {
     protected $signature = 'cascadedocs:generate-module-docs 
-        {--model=o3 : The AI model to use for generation}';
+        {--model= : The AI model to use for generation}';
 
     protected $description = 'Generate module documentation by organizing files and creating module overviews';
 
@@ -15,7 +15,7 @@ class GenerateModuleDocumentationCommand extends Command
     {
         $this->info('Starting module documentation generation...');
 
-        $model = $this->option('model');
+        $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
 
         // Step 1: Analyze module assignments
         $this->info('Step 1: Analyzing module assignments...');

@@ -13,7 +13,7 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
         {--paths=*} 
         {--default-paths}
         {--tier=all : micro|standard|expansive|all}
-        {--model=o3 : The AI model to use for generation}';
+        {--model= : The AI model to use for generation}';
 
     protected $description = 'Generate multi-tier AI documentation for PHP files in specified directories';
 
@@ -31,7 +31,7 @@ class GenerateAiDocumentationForAllFilesCommand extends Command
         }
 
         // Get the model option
-        $model = $this->option('model');
+        $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
 
         // Create documentation directories if they don't exist
         $tier_directories = [

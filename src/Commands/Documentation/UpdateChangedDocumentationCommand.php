@@ -10,7 +10,7 @@ class UpdateChangedDocumentationCommand extends Command
     protected $signature = 'cascadedocs:update-changed 
         {--from-sha= : Git SHA to compare from (defaults to last documented SHA)}
         {--to-sha=HEAD : Git SHA to compare to}
-        {--model=o3 : The AI model to use for generation}
+        {--model= : The AI model to use for generation}
         {--auto-commit : Automatically commit documentation changes}';
 
     protected $description = 'Update documentation for all changed files, modules, and architecture';
@@ -20,7 +20,7 @@ class UpdateChangedDocumentationCommand extends Command
         $this->info('CascadeDocs - Intelligent Documentation Update System');
         $this->info('='.str_repeat('=', 50));
 
-        $model = $this->option('model');
+        $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
         $fromSha = $this->option('from-sha');
         $toSha = $this->option('to-sha') ?? 'HEAD';
 

@@ -10,7 +10,7 @@ class GenerateClassDocumentationCommand extends Command
 {
     protected $signature = 'cascadedocs:generate-class-docs 
         {--tier=all : micro|standard|expansive|all}
-        {--model=o3 : The AI model to use for generation}
+        {--model= : The AI model to use for generation}
         {--force : Regenerate documentation even if it exists}';
 
     protected $description = 'Generate documentation for all classes in your application';
@@ -20,7 +20,7 @@ class GenerateClassDocumentationCommand extends Command
         $this->info('Starting class documentation generation...');
 
         $tier = $this->option('tier');
-        $model = $this->option('model');
+        $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
         $force = $this->option('force');
 
         // Validate tier

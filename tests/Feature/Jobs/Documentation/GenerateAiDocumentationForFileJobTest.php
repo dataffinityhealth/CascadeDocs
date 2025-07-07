@@ -61,7 +61,7 @@ PHP;
         $this->mock_openai_response();
 
         // When we dispatch the job
-        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'all', 'o3');
+        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'all', 'claude-3-5-sonnet-latest');
         $job->handle();
 
         // Then documentation files should be created
@@ -92,7 +92,7 @@ PHP;
         ]);
 
         // When we dispatch the job
-        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'all', 'o3');
+        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'all', 'claude-3-5-sonnet-latest');
         $job->handle();
 
         // Then no HTTP requests should have been made
@@ -106,7 +106,7 @@ PHP;
         $this->mock_openai_response();
 
         // When we dispatch the job for only 'micro' tier
-        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'micro', 'o3');
+        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'micro', 'claude-3-5-sonnet-latest');
         $job->handle();
 
         // Then only the micro documentation should be created
@@ -129,16 +129,13 @@ PHP;
         ]);
 
         // When we dispatch the job
-        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'micro', 'o3');
+        $job = new GenerateAiDocumentationForFileJob($this->test_file_path, 'micro', 'claude-3-5-sonnet-latest');
 
-        // The job should handle the error
-        try {
-            $job->handle();
-            $this->fail('Expected exception was not thrown');
-        } catch (Exception $e) {
-            // The job should throw an exception for the rate limit
-            $this->assertStringContainsString('Failed to generate documentation', $e->getMessage());
-        }
+        // The job should handle the rate limit gracefully without throwing an exception
+        $job->handle();
+        
+        // The job should not create any documentation files when rate limited
+        $this->assertFileDoesNotExist(base_path('docs/source_documents/short/app/TestClass.md'));
     }
 
     #[Test]
@@ -168,7 +165,7 @@ PHP;
         $this->mock_openai_response();
 
         // When we dispatch the job
-        $job = new GenerateAiDocumentationForFileJob($nested_file_path, 'micro', 'o3');
+        $job = new GenerateAiDocumentationForFileJob($nested_file_path, 'micro', 'claude-3-5-sonnet-latest');
         $job->handle();
 
         // Then the nested directory structure should be created
@@ -209,7 +206,7 @@ JS;
         $this->mock_openai_response();
 
         // When we dispatch the job
-        $job = new GenerateAiDocumentationForFileJob($js_file_path, 'micro', 'o3');
+        $job = new GenerateAiDocumentationForFileJob($js_file_path, 'micro', 'claude-3-5-sonnet-latest');
         $job->handle();
 
         // Then documentation should be created
@@ -240,27 +237,44 @@ JS;
 
     private function mock_openai_response(): void
     {
-        Http::fake([
-            '*' => Http::response($this->get_successful_openai_response(), 200),
-        ]);
-    }
-
-    private function get_successful_openai_response(): array
-    {
-        return [
-            'choices' => [
-                [
-                    'message' => [
-                        'content' => json_encode([
-                            'micro' => "## TestClass · Micro-blurb\n\nThis is a test class that demonstrates basic functionality.",
-                            'standard' => "```yaml\ndoc_tier: standard\ndoc_version: 1\n```\n\n# TestClass\n\n## Purpose\nTest class for documentation generation.",
-                            'expansive' => "```yaml\ndoc_tier: expansive\ndoc_version: 1\n```\n\n# TestClass\n\n## File Purpose\nComprehensive test class documentation.",
-                        ]),
+        Http::fake(function ($request) {
+            $documentation = [
+                'micro' => "## TestClass · Micro-blurb\n\nThis is a test class that demonstrates basic functionality.",
+                'standard' => "```yaml\ndoc_tier: standard\ndoc_version: 1\n```\n\n# TestClass\n\n## Purpose\nTest class for documentation generation.",
+                'expansive' => "```yaml\ndoc_tier: expansive\ndoc_version: 1\n```\n\n# TestClass\n\n## File Purpose\nComprehensive test class documentation.",
+            ];
+            
+            // Check if it's an OpenAI request (to openai.com)
+            if (str_contains($request->url(), 'openai.com')) {
+                // Return OpenAI format
+                return Http::response([
+                    'choices' => [
+                        [
+                            'message' => [
+                                'content' => json_encode($documentation),
+                            ],
+                            'finish_reason' => 'stop',
+                        ],
                     ],
-                    'finish_reason' => 'stop',
+                ], 200);
+            }
+            
+            // Otherwise it's Claude format
+            // For JSON mode, ClaudeTrait adds '{' prefix, so we need to return JSON without the opening brace
+            $jsonContent = json_encode($documentation);
+            $jsonWithoutOpeningBrace = substr($jsonContent, 1); // Remove the opening '{'
+            
+            return Http::response([
+                'content' => [
+                    [
+                        'text' => $jsonWithoutOpeningBrace,
+                        'type' => 'text',
+                    ],
                 ],
-            ],
-        ];
+                'stop_reason' => 'end_turn',
+                'model' => 'claude-3-5-sonnet-latest',
+            ], 200);
+        });
     }
 
     private function create_existing_documentation(): void

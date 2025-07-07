@@ -10,7 +10,7 @@ beforeEach(function () {
         'cascadedocs.queue.retry_attempts' => 3,
         'cascadedocs.queue.timeout' => 300,
         'cascadedocs.queue.rate_limit_delay' => 60,
-        'cascadedocs.ai.default_model' => 'o3',
+        'cascadedocs.ai.default_model' => 'claude-3-5-sonnet-latest',
         'cascadedocs.tier_names' => ['micro', 'standard', 'expansive'],
         'cascadedocs.tiers' => [
             'micro' => 'short',
@@ -33,7 +33,7 @@ it('initializes with correct configuration', function () {
     // Then
     expect($job->tries)->toBe(3);
     expect($job->timeout)->toBe(300);
-    expect($job->model)->toBe('o3');
+    expect($job->model)->toBe(config('cascadedocs.ai.default_model'));
     expect($job->tier)->toBe('all');
 });
 
@@ -319,6 +319,11 @@ it('generates all tiers when some are missing', function () {
     File::shouldReceive('get')
         ->with($filePath)
         ->andReturn("<?php\n\nclass PartialService {}");
+        
+    // Mock file get for existing documentation (only micro exists)
+    File::shouldReceive('get')
+        ->with($microPath)
+        ->andReturn('Existing micro documentation content');
 
     $job = Mockery::mock(GenerateAiDocumentationForFileJob::class.'[get_response_from_provider]', [$filePath])
         ->shouldAllowMockingProtectedMethods();

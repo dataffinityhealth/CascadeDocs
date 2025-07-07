@@ -31,8 +31,10 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     public function __construct(
         public string $module_slug,
         public string $to_sha,
-        public string $model = 'o3'
-    ) {}
+        public ?string $model = null
+    ) {
+        $this->model = $model ?? config('cascadedocs.ai.default_model');
+    }
 
     public function handle(): void
     {

@@ -18,7 +18,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
 {
     protected $signature = 'documentation:update-after-merge 
                             {--since= : Override the last update SHA}
-                            {--model=o3 : AI model to use}
+                            {--model= : AI model to use}
                             {--dry-run : Show what would be updated}
                             {--limit=400 : Maximum number of unassigned files to process}';
 
@@ -46,7 +46,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
         $this->info('Starting complete documentation update workflow...');
 
         $dryRun = $this->option('dry-run');
-        $model = $this->option('model');
+        $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
 
         // Step 1: Load update log and determine SHAs
         $updateLog = $this->diffService->load_update_log();

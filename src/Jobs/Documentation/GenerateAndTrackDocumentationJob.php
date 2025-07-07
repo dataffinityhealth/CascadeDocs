@@ -22,8 +22,10 @@ class GenerateAndTrackDocumentationJob implements ShouldQueue
     public function __construct(
         public string $file_path,
         public string $to_sha,
-        public string $model = 'o3'
-    ) {}
+        public ?string $model = null
+    ) {
+        $this->model = $model ?? config('cascadedocs.ai.default_model');
+    }
 
     public function handle(): void
     {

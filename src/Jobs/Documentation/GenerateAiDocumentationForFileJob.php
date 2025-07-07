@@ -34,7 +34,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     ) {
         $this->tries = config('cascadedocs.queue.retry_attempts', 3);
         $this->timeout = config('cascadedocs.queue.timeout', 300);
-        $this->model = $model ?? config('cascadedocs.ai.default_model', 'o3');
+        $this->model = $model ?? config('cascadedocs.ai.default_model');
     }
 
     public function handle(): void

@@ -15,7 +15,7 @@ class UpdateDocumentationForChangedFilesCommand extends Command
     protected $signature = 'update:documentation 
         {--since= : Specific commit SHA to update from}
         {--dry-run : Show what would be updated without making changes}
-        {--model=o3 : The AI model to use for generation}';
+        {--model= : The AI model to use for generation}';
 
     protected $description = 'Update documentation for files that have changed since the last update';
 
@@ -34,7 +34,7 @@ class UpdateDocumentationForChangedFilesCommand extends Command
     {
         $this->info('Starting documentation update process...');
         $dry_run = $this->option('dry-run');
-        $model = $this->option('model');
+        $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
 
         // Load the update log
         $update_log = $this->diff_service->load_update_log();

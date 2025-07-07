@@ -10,7 +10,7 @@ class UpdateAllModuleDocumentationCommand extends Command
 {
     protected $signature = 'documentation:update-all-modules 
                             {--module= : Update a specific module}
-                            {--model=o3 : The AI model to use for generation}
+                            {--model= : The AI model to use for generation}
                             {--dry-run : Show what would be updated without making changes}
                             {--limit=0 : Maximum number of modules to process (0 = all)}';
 
@@ -27,7 +27,7 @@ class UpdateAllModuleDocumentationCommand extends Command
     public function handle(): int
     {
         $moduleSlug = $this->option('module');
-        $model = $this->option('model');
+        $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
         $dryRun = $this->option('dry-run');
 
         $this->info('Starting module documentation update process...');

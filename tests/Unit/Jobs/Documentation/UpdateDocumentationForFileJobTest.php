@@ -13,7 +13,7 @@ beforeEach(function () {
         'cascadedocs.queue.retry_attempts' => 3,
         'cascadedocs.queue.timeout' => 300,
         'cascadedocs.queue.rate_limit_delay' => 60,
-        'cascadedocs.ai.default_model' => 'o3',
+        'cascadedocs.ai.default_model' => 'claude-3-5-sonnet-latest',
         'cascadedocs.tiers' => [
             'micro' => 'short',
             'standard' => 'medium',
@@ -40,7 +40,7 @@ it('initializes with correct configuration', function () {
     // Then
     expect($job->tries)->toBe(3);
     expect($job->timeout)->toBe(300);
-    expect($job->model)->toBe('o3');
+    expect($job->model)->toBe(config('cascadedocs.ai.default_model'));
     expect($job->file_path)->toBe($filePath);
     expect($job->from_sha)->toBe($fromSha);
     expect($job->to_sha)->toBe($toSha);
@@ -116,7 +116,7 @@ it('dispatches generation job for new files with no diff', function () {
     Queue::assertPushed(GenerateAndTrackDocumentationJob::class, function ($job) use ($filePath) {
         return $job->file_path === $filePath
             && $job->to_sha === 'def456'
-            && $job->model === 'o3';
+            && $job->model === config('cascadedocs.ai.default_model');
     });
 
     // Cleanup
