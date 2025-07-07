@@ -295,7 +295,7 @@ class ModuleMetadataService
      */
     protected function calculateStatistics(array $metadata): array
     {
-        $documentedCount   = count($metadata['files']);
+        $documentedCount   = count($metadata['files'] ?? []);
         $undocumentedCount = count($metadata['undocumented_files'] ?? []);
 
         return [
