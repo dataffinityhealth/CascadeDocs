@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\File;
 use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
+use Shawnveltman\LaravelOpenai\Exceptions\OpenAiApiException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
 class UpdateModuleDocumentationJob implements ShouldQueue
@@ -39,6 +40,13 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     public function handle(): void
     {
         $metadata_service = new ModuleMetadataService;
+
+        // Log start of job
+        logger()->info('UpdateModuleDocumentationJob started', [
+            'module_slug' => $this->module_slug,
+            'to_sha' => $this->to_sha,
+            'model' => $this->model,
+        ]);
 
         // Check if module exists
         if (! $metadata_service->moduleExists($this->module_slug)) {
@@ -78,8 +86,18 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
         if (empty($undocumented_files)) {
             // No undocumented files, no update needed
+            logger()->info('No undocumented files for module, skipping update', [
+                'module_slug' => $this->module_slug,
+            ]);
+
             return;
         }
+
+        logger()->info('Found undocumented files for module', [
+            'module_slug' => $this->module_slug,
+            'undocumented_count' => count($undocumented_files),
+            'files' => $undocumented_files,
+        ]);
 
         // Collect full documentation for undocumented files
         $files_documentation = $this->collect_files_documentation($undocumented_files);
@@ -96,7 +114,18 @@ class UpdateModuleDocumentationJob implements ShouldQueue
             $files_documentation
         );
 
+        logger()->info('Generated module update prompt', [
+            'module_slug' => $this->module_slug,
+            'prompt_length' => strlen($prompt),
+            'files_count' => $files_documentation->count(),
+        ]);
+
         try {
+            logger()->info('Calling AI provider for module update', [
+                'module_slug' => $this->module_slug,
+                'model' => $this->model,
+            ]);
+
             $response = $this->get_response_from_provider($prompt, $this->model);
 
             // Validate response doesn't contain placeholders
@@ -157,7 +186,18 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
             // 6. Update the log (this is less critical)
             $this->update_module_in_log($this->module_slug);
+
+            logger()->info('Successfully updated module documentation', [
+                'module_slug' => $this->module_slug,
+                'files_documented' => count($undocumented_files),
+                'content_length' => strlen($response),
+            ]);
         } catch (ClaudeRateLimitException $e) {
+            logger()->warning('Claude rate limit hit for module update', [
+                'module_slug' => $this->module_slug,
+                'error' => $e->getMessage(),
+            ]);
+
             // Restore original content if it was modified
             if ($original_content !== null && File::exists($content_file_path)) {
                 File::put($content_file_path, $original_content);
@@ -167,13 +207,48 @@ class UpdateModuleDocumentationJob implements ShouldQueue
             $this->release(120); // Release back to queue after 2 minutes
 
             return;
-        } catch (Exception $e) {
+        } catch (OpenAiApiException $e) {
+            logger()->error('OpenAI API error for module update', [
+                'module_slug' => $this->module_slug,
+                'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'prompt_length' => strlen($prompt ?? ''),
+                'model' => $this->model,
+            ]);
+
             // Restore original content if it was modified
             if ($original_content !== null && File::exists($content_file_path)) {
                 File::put($content_file_path, $original_content);
             }
 
-            throw new Exception('Failed to update module documentation: '.$e->getMessage());
+            // For token limit errors, don't retry
+            if (str_contains($e->getMessage(), 'maximum context length') ||
+                str_contains($e->getMessage(), 'token')) {
+                logger()->error('Token limit exceeded, failing job permanently', [
+                    'module_slug' => $this->module_slug,
+                ]);
+                $this->fail($e);
+
+                return;
+            }
+
+            throw $e;
+        } catch (Exception $e) {
+            logger()->error('Failed to update module documentation', [
+                'module_slug' => $this->module_slug,
+                'error' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+                'prompt_length' => strlen($prompt ?? ''),
+                'model' => $this->model,
+            ]);
+
+            // Restore original content if it was modified
+            if ($original_content !== null && File::exists($content_file_path)) {
+                File::put($content_file_path, $original_content);
+            }
+
+            throw new Exception("Failed to update module documentation for {$this->module_slug}: ".$e->getMessage());
         }
     }
 
