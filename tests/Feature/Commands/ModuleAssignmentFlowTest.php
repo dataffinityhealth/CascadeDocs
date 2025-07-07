@@ -4,8 +4,6 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentAIService;
-use Lumiio\CascadeDocs\Services\Documentation\ModuleFileUpdater;
-use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
 
 describe('Module Assignment Flow', function () {
     beforeEach(function () {
@@ -17,7 +15,7 @@ describe('Module Assignment Flow', function () {
         Config::set('cascadedocs.tier_directories', ['full', 'medium', 'short']);
         Config::set('cascadedocs.ai.default_model', 'gpt-4o');
         Config::set('cascadedocs.ai.default_provider', 'openai');
-        
+
         // Create test directories
         File::makeDirectory(base_path('docs'), 0755, true, true);
         File::makeDirectory(base_path('docs/source_documents/modules'), 0755, true, true);
@@ -75,13 +73,13 @@ describe('Module Assignment Flow', function () {
                 ],
             ], 200),
         ]);
-        
+
         // Create a real instance first, then mock it
-        $realService = new ModuleAssignmentAIService();
+        $realService = new ModuleAssignmentAIService;
         $service = Mockery::mock($realService)
             ->makePartial()
             ->shouldAllowMockingProtectedMethods();
-        
+
         // Mock filesystem-related methods
         $service->shouldReceive('get_all_documented_files')
             ->andReturn(collect([
@@ -90,7 +88,7 @@ describe('Module Assignment Flow', function () {
                 'app/Models/User.php',
                 'app/Http/Middleware/Authenticate.php',
             ]));
-            
+
         $service->shouldReceive('getAllFilesWithDocs')
             ->andReturnUsing(function ($files) {
                 return $files->mapWithKeys(function ($file) {
@@ -101,7 +99,7 @@ describe('Module Assignment Flow', function () {
                     ]];
                 });
             });
-            
+
         // Mock module file creation - make it optional since it depends on the response
         $service->shouldReceive('createModuleFiles')
             ->zeroOrMoreTimes()
@@ -117,7 +115,7 @@ describe('Module Assignment Flow', function () {
             ->toHaveKey('user-management')
             ->and($result['ai_created_modules'])
             ->toHaveCount(2);
-            
+
         // Verify no healthcare terms in saved data
         expect($result['ai_created_modules'][0]['description'])
             ->not->toContain('healthcare')
@@ -151,7 +149,7 @@ describe('Module Assignment Flow', function () {
             json_encode($existingLog, JSON_PRETTY_PRINT)
         );
 
-        $service = new ModuleAssignmentAIService();
+        $service = new ModuleAssignmentAIService;
 
         // Use reflection to test buildModuleAssignmentPrompt
         $reflection = new ReflectionMethod($service, 'buildModuleAssignmentPrompt');
@@ -185,7 +183,7 @@ describe('Module Assignment Flow', function () {
 
 describe('Edge Cases', function () {
     it('handles special characters in module names', function () {
-        $service = new ModuleAssignmentAIService();
+        $service = new ModuleAssignmentAIService;
 
         $reflection = new ReflectionMethod($service, 'getAssignmentInstructions');
         $reflection->setAccessible(true);
