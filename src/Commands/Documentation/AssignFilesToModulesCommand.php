@@ -315,7 +315,7 @@ class AssignFilesToModulesCommand extends Command
     /**
      * Get AI recommendations for module assignment.
      */
-    protected function getAIRecommendations(string $prompt, string $model): array
+    protected function getAIRecommendations(string $prompt, ?string $model): array
     {
         $this->info('Calling AI service for recommendations...');
 
@@ -328,7 +328,7 @@ class AssignFilesToModulesCommand extends Command
             // Call the AI service with JSON mode
             $response = $this->get_response_from_provider(
                 $fullPrompt,
-                $model,
+                $model ?? config('cascadedocs.ai.default_model'),
                 json_mode: true
             );
 

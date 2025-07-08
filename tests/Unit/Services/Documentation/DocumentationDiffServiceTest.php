@@ -236,6 +236,9 @@ it('saves update log', function () {
         ],
     ];
 
+    // Ensure directory exists
+    File::ensureDirectoryExists(base_path('docs'));
+
     // When
     $this->service->save_update_log($log);
 
