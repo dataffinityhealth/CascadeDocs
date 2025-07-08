@@ -10,6 +10,7 @@ use Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilament
 use Lumiio\CascadeDocs\Commands\Documentation\GenerateArchitectureDocumentationCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\GenerateClassDocumentationCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\GenerateModuleDocumentationCommand;
+use Lumiio\CascadeDocs\Commands\Documentation\GenerateModuleIndexCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\SyncModuleAssignmentsCommand;
 use Lumiio\CascadeDocs\Commands\Documentation\UpdateAllModuleDocumentationCommand;
@@ -65,6 +66,7 @@ class CascadeDocsServiceProvider extends PackageServiceProvider
                 GenerateModuleDocumentationCommand::class,
                 GenerateArchitectureDocumentationCommand::class,
                 UpdateChangedDocumentationCommand::class,
+                GenerateModuleIndexCommand::class,
             ]);
     }
 }

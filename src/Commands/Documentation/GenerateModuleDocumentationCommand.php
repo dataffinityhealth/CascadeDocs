@@ -55,8 +55,12 @@ class GenerateModuleDocumentationCommand extends Command
             '--force' => true, // Skip confirmation in automated flow
         ]);
 
-        // Step 5: Show module status
-        $this->info("\nStep 5: Module documentation status:");
+        // Step 5: Generate module index
+        $this->info("\nStep 5: Generating module index...");
+        $this->call('cascadedocs:generate-module-index');
+
+        // Step 6: Show module status
+        $this->info("\nStep 6: Module documentation status:");
         $this->call('documentation:module-status');
 
         $this->newLine();

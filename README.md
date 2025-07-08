@@ -5,43 +5,57 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/lumiio/cascadedocs/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/lumiio/cascadedocs/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/lumiio/cascadedocs.svg?style=flat-square)](https://packagist.org/packages/lumiio/cascadedocs)
 
-AI-powered documentation generation for Laravel applications. CascadeDocs automatically generates comprehensive documentation for your codebase using AI, organizing it into classes, modules, and architecture levels.
+Automatically generate and maintain comprehensive documentation for your Laravel codebase using AI. CascadeDocs analyzes your code, organizes it into logical modules, and creates multi-tier documentation that stays in sync with your development.
 
-## Features
+## Why CascadeDocs?
 
-- 🤖 **AI-Powered Documentation**: Uses OpenAI/Claude to generate intelligent documentation
-- 📚 **Multi-Tier Documentation**: Generate micro, standard, or expansive documentation levels
-- 🗂️ **Smart Module Organization**: Automatically groups related files into logical modules
-- 🏗️ **Architecture Documentation**: Creates high-level system architecture documentation
-- 🔄 **Incremental Updates**: Only regenerates documentation for changed files
-- 🎯 **Git Integration**: Track changes and update documentation based on commits
-- ⚡ **Queue Support**: Process documentation generation asynchronously
-- 🛠️ **Highly Configurable**: Customize paths, file types, and AI settings
+Modern codebases grow complex quickly. New team members struggle to understand the system architecture. Documentation becomes outdated the moment it's written. CascadeDocs solves these problems by:
 
-## Requirements
+- **Understanding Your Code**: AI analyzes your actual code structure, not just comments
+- **Multiple Perspectives**: Three documentation tiers serve different needs:
+  - **Micro**: Quick overview for code reviews and navigation
+  - **Standard**: Balanced documentation for everyday development
+  - **Expansive**: Deep dive for complex debugging and onboarding
+- **Living Documentation**: Git integration ensures docs update only when code actually changes
+- **Contextual Understanding**: Modules show how files work together, not just what individual files do
 
-- PHP 8.2+
-- Laravel 10.0+
-- Git (for change tracking features)
+### Perfect for AI-Powered Development
 
-## Installation
+When using coding assistants like Claude Code, Cursor, or GitHub Copilot, context is everything. CascadeDocs provides:
 
-You can install the package via composer:
+- **Module Index**: Feed the `modules/index.md` to your AI to instantly convey your entire system architecture
+- **Targeted Context**: Share specific module documentation to keep AI responses focused and accurate
+- **Consistent Code Generation**: AI understands your patterns and conventions from the documented modules
+- **Better Recommendations**: With full system context, AI agents make architectural decisions that fit your existing design
+
+Instead of copying random files and hoping for the best, you can give your AI assistant exactly the context it needs to understand where new features should go and how they should be implemented.
+
+## Key Features
+
+- 🤖 **AI-Powered Analysis**: Uses OpenAI or Claude to understand your code and generate meaningful documentation
+- 📚 **Three Documentation Tiers**: Choose between micro (brief), standard (balanced), or expansive (detailed) documentation
+- 🗂️ **Automatic Module Organization**: Intelligently groups related files into cohesive modules
+- 🔄 **Git-Based Updates**: Only regenerates documentation for files that have actually changed
+- 🏗️ **Architecture Overview**: Automatically generates high-level system architecture documentation
+- ⚡ **Queue Support**: Process large codebases asynchronously without blocking your application
+- 📊 **Module Index**: Provides a comprehensive overview of all modules for easy navigation
+
+## Quick Start
+
+### Installation
 
 ```bash
 composer require lumiio/cascadedocs
 ```
 
-### Required: Install AI Provider Package
+### Setup
 
-CascadeDocs uses the `shawnveltman/laravel-openai` package for AI integration. You must publish its configuration:
-
+1. **Publish the AI provider configuration:**
 ```bash
 php artisan vendor:publish --provider="Shawnveltman\LaravelOpenai\LaravelOpenaiServiceProvider"
 ```
 
-This will create a `config/openai.php` file. Configure your AI provider credentials in your `.env` file:
-
+2. **Add your AI credentials to `.env`:**
 ```bash
 # For OpenAI
 OPENAI_API_KEY=your-openai-api-key
@@ -51,49 +65,170 @@ OPENAI_ORGANIZATION=your-org-id # Optional
 ANTHROPIC_API_KEY=your-anthropic-api-key
 ```
 
-### Publish CascadeDocs Configuration
-
+3. **Publish CascadeDocs configuration:**
 ```bash
 php artisan vendor:publish --tag="cascadedocs-config"
 ```
 
-This will create a `config/cascadedocs.php` file where you can customize settings.
+### Generate Documentation
 
-## Usage
-
-### Quick Start
-
-Generate documentation for your entire codebase:
+Run these commands in order for a complete documentation setup:
 
 ```bash
-# Generate class documentation
+# 1. Generate documentation for all your classes
 php artisan cascadedocs:generate-class-docs
 
-# Organize into modules
+# 2. Organize files into logical modules and create module documentation
 php artisan cascadedocs:generate-module-docs
 
-# Generate architecture overview
+# 3. Generate high-level architecture documentation
 php artisan cascadedocs:generate-architecture-docs
 ```
 
-### Update Documentation
+**Important**: If you're using queue processing, wait for each command's jobs to complete before running the next command. Monitor your queue with `php artisan queue:work` or check your queue dashboard.
 
-Keep your documentation in sync with code changes:
+Your documentation is now available in `docs/source_documents/`.
+
+## Documentation Workflow
+
+### Initial Setup
+
+When starting with a new codebase:
+
+1. **Generate class documentation** - Creates documentation for each file at three detail levels
+2. **Generate module documentation** - Groups related files and creates module overviews
+3. **Generate architecture documentation** - Creates system-level documentation from module summaries
+
+### Keeping Documentation Updated
+
+As your code evolves:
+
+```bash
+# Update documentation for changed files only
+php artisan cascadedocs:update-changed
+
+# Update and auto-commit the changes
+php artisan cascadedocs:update-changed --auto-commit
+```
+
+The update command uses Git to detect which files have changed since the last documentation run, saving time and API costs.
+
+## Documentation Structure
+
+```
+docs/source_documents/
+├── short/           # Micro-tier: Brief one-line summaries
+├── medium/          # Standard-tier: Balanced documentation
+├── full/            # Expansive-tier: Detailed documentation with examples
+├── modules/         # Module-level documentation
+│   ├── content/     # Module overview documents
+│   ├── metadata/    # Module configuration and tracking
+│   └── index.md     # Searchable index of all modules
+└── architecture/    # System-level architecture documentation
+    ├── architecture-summary.md    # 1-2 page overview
+    └── system-architecture.md     # Comprehensive architecture doc
+```
+
+## Command Reference
+
+### Class Documentation
+
+```bash
+# Generate all tiers (default)
+php artisan cascadedocs:generate-class-docs
+
+# Generate specific tier only
+php artisan cascadedocs:generate-class-docs --tier=standard
+
+# Force regeneration of existing docs
+php artisan cascadedocs:generate-class-docs --force
+
+# Use a specific AI model
+php artisan cascadedocs:generate-class-docs --model=gpt-4
+```
+
+### Module Documentation
+
+```bash
+# Complete module workflow (recommended)
+php artisan cascadedocs:generate-module-docs
+
+# Or run individual steps:
+php artisan documentation:analyze-modules          # AI analyzes optimal module structure
+php artisan documentation:assign-files-to-modules  # Assigns files to modules
+php artisan documentation:update-all-modules       # Generates module documentation
+php artisan cascadedocs:generate-module-index      # Creates searchable index
+```
+
+### Update Documentation
 
 ```bash
 # Update based on git changes
 php artisan cascadedocs:update-changed
 
-# Auto-commit documentation updates
+# Update from specific commit
+php artisan cascadedocs:update-changed --from-sha=abc123
+
+# Update and commit changes
 php artisan cascadedocs:update-changed --auto-commit
 ```
 
-### Programmatic Usage
+### Utility Commands
+
+```bash
+# View module status
+php artisan documentation:module-status
+
+# Create a new module manually
+php artisan documentation:create-module "Payment Processing"
+
+# Force fresh module analysis (ignores cache)
+php artisan cascadedocs:generate-module-docs --fresh
+```
+
+## Configuration
+
+The `config/cascadedocs.php` file controls:
+
+```php
+return [
+    'paths' => [
+        'source' => ['app/', 'resources/js/'],  // Directories to document
+        'output' => 'docs/source_documents/',    // Documentation location
+    ],
+    'file_types' => ['php', 'js', 'vue', 'jsx', 'ts', 'tsx'],
+    'ai' => [
+        'default_model' => 'gpt-4',  // or 'claude-3-5-sonnet', etc.
+        'temperature' => 0.7,
+    ],
+    'queue' => [
+        'connection' => 'default',
+        'queue' => 'documentation',
+    ],
+];
+```
+
+## Tracking Files
+
+CascadeDocs maintains several JSON files to enable efficient updates:
+
+### `docs/documentation-update-log.json`
+Tracks the last commit SHA for each documented file, enabling incremental updates.
+
+### `docs/module-assignment-log.json`
+Caches the AI's module organization analysis to maintain consistency across runs.
+
+### `docs/source_documents/modules/metadata/*.json`
+Individual module metadata including file assignments, summaries, and documentation status.
+
+These files should be committed to your repository to maintain state across team members.
+
+## Programmatic Usage
 
 ```php
 use Lumiio\CascadeDocs\Facades\CascadeDocs;
 
-// Get documentation for a file
+// Get documentation for a specific file
 $docs = CascadeDocs::getDocumentation('app/Models/User.php', 'standard');
 
 // Get all modules
@@ -101,79 +236,40 @@ $modules = CascadeDocs::getModules();
 
 // Get module documentation
 $moduleDocs = CascadeDocs::getModuleDocumentation('user-management');
+
+// Get file's module assignment
+$module = CascadeDocs::getFileModule('app/Services/UserService.php');
 ```
 
-## Configuration
+## Best Practices
 
-The configuration file allows you to customize:
+1. **Start with class documentation** - This provides the foundation for module organization
+2. **Review module assignments** - The AI makes intelligent suggestions, but you can manually adjust
+3. **Use queues for large codebases** - Prevents timeouts and improves performance
+4. **Commit tracking files** - Ensures consistent documentation across your team
+5. **Run updates regularly** - Keep documentation in sync with code changes
 
-```php
-return [
-    'paths' => [
-        'source' => ['app/', 'resources/js/'],  // Directories to document
-        'output' => 'docs/source_documents/',    // Where to store documentation
-    ],
-    'file_types' => ['php', 'js', 'vue', 'jsx', 'ts', 'tsx'],
-    'ai' => [
-        'default_model' => 'gpt-4',  // or 'o3', 'claude-3', etc.
-        'temperature' => 0.7,
-    ],
-    'exclude' => [
-        'directories' => ['vendor', 'node_modules'],
-        'patterns' => ['*Test.php', '*.min.js'],
-    ],
-];
-```
+## Troubleshooting
 
-## Commands Reference
+### "No modules found"
+Run `php artisan cascadedocs:generate-class-docs` first to create the base documentation.
 
-### Generate Class Documentation
+### "AI response contains placeholder text"
+The AI model is returning incomplete responses. Try using a different model (e.g., GPT-4 instead of GPT-3.5, or Claude instead of OpenAI).
 
-```bash
-# Generate all tiers
-php artisan cascadedocs:generate-class-docs
+### Rate limit errors
+- Ensure your queue worker is running: `php artisan queue:work`
+- The package automatically retries with delays
 
-# Generate specific tier (micro, standard, expansive)
-php artisan cascadedocs:generate-class-docs --tier=standard
+### Memory issues
+- Use queue processing for large codebases
+- Process documentation generation in smaller batches by documenting specific directories
 
-# Force regeneration
-php artisan cascadedocs:generate-class-docs --force
+## Requirements
 
-# Use specific AI model
-php artisan cascadedocs:generate-class-docs --model=gpt-4
-```
-
-### Generate Module Documentation
-
-```bash
-# Full module generation workflow
-php artisan cascadedocs:generate-module-docs
-
-# Individual module commands
-php artisan documentation:create-module "User Management"
-php artisan documentation:assign-files-to-modules --force
-php artisan documentation:update-all-modules
-php artisan documentation:module-status
-```
-
-### Generate Architecture Documentation
-
-```bash
-php artisan cascadedocs:generate-architecture-docs
-```
-
-### Update Documentation for Changes
-
-```bash
-# Update from last documented commit
-php artisan cascadedocs:update-changed
-
-# Update from specific commit
-php artisan cascadedocs:update-changed --from-sha=abc123 --to-sha=HEAD
-
-# Auto-commit documentation changes
-php artisan cascadedocs:update-changed --auto-commit
-```
+- PHP 8.2+
+- Laravel 10.0+
+- Git (for change tracking features)
 
 ## Testing
 
@@ -181,75 +277,9 @@ php artisan cascadedocs:update-changed --auto-commit
 composer test
 ```
 
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
-## Documentation Structure
-
-CascadeDocs generates documentation in the following structure:
-
-```
-docs/source_documents/
-├── short/          # Micro-level documentation (brief summaries)
-├── medium/         # Standard documentation
-├── full/           # Expansive documentation with full details
-├── modules/        # Module organization
-│   ├── content/    # Module documentation files
-│   └── metadata/   # Module configuration and metadata
-└── architecture/   # System-level architecture documentation
-```
-
-## How It Works
-
-1. **File Analysis**: CascadeDocs scans your configured source directories for code files
-2. **AI Generation**: Each file is processed by AI to generate documentation at multiple detail levels
-3. **Module Organization**: Files are intelligently grouped into logical modules based on their purpose and relationships
-4. **Architecture Synthesis**: Module summaries are analyzed to create high-level architecture documentation
-5. **Change Tracking**: Git integration tracks changes and only updates affected documentation
-
-## Troubleshooting
-
-### AI Provider Setup
-
-Make sure you have:
-
-1. Published the AI provider configuration:
-   ```bash
-   php artisan vendor:publish --provider="Shawnveltman\LaravelOpenai\LaravelOpenaiServiceProvider"
-   ```
-
-2. Configured your AI provider credentials in `.env`:
-   ```bash
-   # For OpenAI
-   OPENAI_API_KEY=your-api-key
-   OPENAI_ORGANIZATION=your-org-id # Optional
-   
-   # For Claude/Anthropic
-   ANTHROPIC_API_KEY=your-api-key
-   ```
-
-### Queue Configuration
-
-For large codebases, ensure your queue worker is running:
-
-```bash
-php artisan queue:work
-```
-
-### Common Issues
-
-- **"No modules found"**: Run `php artisan cascadedocs:generate-class-docs` first
-- **"AI response contains placeholder text"**: The AI model is not providing complete responses. Try using a different model
-- **Memory issues**: Adjust the `chunk_size` in the configuration to process fewer files at once
 
 ## Credits
 
