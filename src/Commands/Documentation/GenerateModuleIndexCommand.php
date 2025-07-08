@@ -45,8 +45,8 @@ class GenerateModuleIndexCommand extends Command
 
                 if ($metadata) {
                     $modules->push([
-                        'name' => $metadata['name'],
-                        'slug' => $metadata['slug'],
+                        'name' => $metadata['module_name'] ?? $module_slug,
+                        'slug' => $metadata['module_slug'] ?? $module_slug,
                         'summary' => $metadata['module_summary'] ?? 'No summary available',
                         'file_count' => count($metadata['files'] ?? []),
                         'undocumented_count' => count($metadata['undocumented_files'] ?? []),
