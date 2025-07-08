@@ -236,7 +236,6 @@ return [
     |
     */
     'performance' => [
-        'chunk_size' => env('CASCADEDOCS_CHUNK_SIZE', 10),
         'timeout' => env('CASCADEDOCS_TIMEOUT', 300),
         'memory_limit' => env('CASCADEDOCS_MEMORY_LIMIT', '512M'),
     ],
