@@ -21,7 +21,7 @@ class GenerateModuleIndexCommand extends Command
         $modules = collect();
 
         // Get all module metadata files
-        $metadata_dir = $metadata_service->getMetadataDirectory();
+        $metadata_dir = base_path(config('cascadedocs.paths.modules.metadata'));
 
         if (! File::exists($metadata_dir)) {
             $this->error("No module metadata found. Please run 'php artisan cascadedocs:generate-module-docs' first.");
