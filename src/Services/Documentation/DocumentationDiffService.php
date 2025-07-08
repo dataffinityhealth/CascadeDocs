@@ -162,6 +162,12 @@ class DocumentationDiffService
     {
         $log_path = base_path(config('cascadedocs.paths.tracking.documentation_update'));
 
+        // Ensure the directory exists
+        $directory = dirname($log_path);
+        if (!File::exists($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+
         File::put($log_path, json_encode($log, JSON_PRETTY_PRINT));
     }
 
