@@ -11,19 +11,20 @@ use Mockery;
 class GenerateArchitectureDocumentationCommandTest extends TestCase
 {
     protected string $testPath;
+
     protected string $modulesPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->testPath = 'tests/fixtures/architecture-docs';
-        $this->modulesPath = $this->testPath . '/modules/metadata';
-        
+        $this->modulesPath = $this->testPath.'/modules/metadata';
+
         // Create test directories
         File::ensureDirectoryExists(base_path($this->modulesPath));
         File::ensureDirectoryExists(base_path('docs/source_documents/architecture'));
-        
+
         // Configure cascadedocs paths
         Config::set('cascadedocs.paths.output', 'docs/source_documents/');
         Config::set('cascadedocs.paths.modules.metadata', $this->modulesPath);
@@ -39,12 +40,12 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
         if (File::exists(base_path($this->testPath))) {
             File::deleteDirectory(base_path($this->testPath));
         }
-        
+
         // Clean up docs directories
         if (File::exists(base_path('docs/source_documents'))) {
             File::deleteDirectory(base_path('docs/source_documents'));
         }
-        
+
         parent::tearDown();
     }
 
@@ -67,7 +68,7 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
     {
         // Create test module metadata
         $this->createTestModuleMetadata();
-        
+
         // Mock the command class to control AI responses
         $this->instance(
             GenerateArchitectureDocumentationCommand::class,
@@ -96,7 +97,7 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
     {
         // Create test module metadata
         $this->createTestModuleMetadata();
-        
+
         // Mock the command class
         $this->instance(
             GenerateArchitectureDocumentationCommand::class,
@@ -109,7 +110,7 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
         );
 
         $this->artisan('cascadedocs:generate-architecture-docs', [
-            '--model' => 'claude-3'
+            '--model' => 'claude-3',
         ])
             ->expectsOutput('Found 3 modules to analyze.')
             ->assertExitCode(0);
@@ -119,7 +120,7 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
     {
         // Create test module metadata
         $this->createTestModuleMetadata();
-        
+
         // Mock the command class
         $this->instance(
             GenerateArchitectureDocumentationCommand::class,
@@ -144,7 +145,7 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
     {
         // Create test module metadata
         $this->createTestModuleMetadata();
-        
+
         // Mock the command class to throw an exception
         $this->instance(
             GenerateArchitectureDocumentationCommand::class,
@@ -167,10 +168,10 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
     {
         // Create test module metadata
         $this->createTestModuleMetadata();
-        
+
         // Create a non-JSON file that should be ignored
-        File::put(base_path($this->modulesPath . '/readme.txt'), 'This is not a module metadata file');
-        
+        File::put(base_path($this->modulesPath.'/readme.txt'), 'This is not a module metadata file');
+
         // Mock the command class
         $this->instance(
             GenerateArchitectureDocumentationCommand::class,
@@ -195,8 +196,8 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
                 'module_name' => 'Authentication',
                 'module_slug' => 'auth',
                 'files' => [
-                    ['path' => 'app/Services/AuthService.php']
-                ]
+                    ['path' => 'app/Services/AuthService.php'],
+                ],
                 // No module_summary
             ],
             'users' => [
@@ -204,18 +205,18 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
                 'module_slug' => 'users',
                 'module_summary' => 'Handles user management',
                 'files' => [
-                    ['path' => 'app/Models/User.php']
-                ]
-            ]
+                    ['path' => 'app/Models/User.php'],
+                ],
+            ],
         ];
 
         foreach ($modules as $slug => $metadata) {
             File::put(
-                base_path($this->modulesPath . '/' . $slug . '.json'),
+                base_path($this->modulesPath.'/'.$slug.'.json'),
                 json_encode($metadata)
             );
         }
-        
+
         // Mock the command class
         $this->instance(
             GenerateArchitectureDocumentationCommand::class,
@@ -236,10 +237,10 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
     {
         // Create valid module metadata
         $this->createTestModuleMetadata();
-        
+
         // Create malformed JSON file
-        File::put(base_path($this->modulesPath . '/malformed.json'), '{"invalid": json,}');
-        
+        File::put(base_path($this->modulesPath.'/malformed.json'), '{"invalid": json,}');
+
         // Mock the command class
         $this->instance(
             GenerateArchitectureDocumentationCommand::class,
@@ -265,8 +266,8 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
                 'module_summary' => 'Handles user authentication and authorization',
                 'files' => [
                     ['path' => 'app/Services/AuthService.php'],
-                    ['path' => 'app/Models/User.php']
-                ]
+                    ['path' => 'app/Models/User.php'],
+                ],
             ],
             'users' => [
                 'module_name' => 'User Management',
@@ -274,22 +275,22 @@ class GenerateArchitectureDocumentationCommandTest extends TestCase
                 'module_summary' => 'Manages user profiles and settings',
                 'files' => [
                     ['path' => 'app/Controllers/UserController.php'],
-                    ['path' => 'app/Models/UserProfile.php']
-                ]
+                    ['path' => 'app/Models/UserProfile.php'],
+                ],
             ],
             'api' => [
                 'module_name' => 'API',
                 'module_slug' => 'api',
                 'module_summary' => 'RESTful API endpoints and responses',
                 'files' => [
-                    ['path' => 'app/Http/Controllers/Api/BaseController.php']
-                ]
-            ]
+                    ['path' => 'app/Http/Controllers/Api/BaseController.php'],
+                ],
+            ],
         ];
 
         foreach ($modules as $slug => $metadata) {
             File::put(
-                base_path($this->modulesPath . '/' . $slug . '.json'),
+                base_path($this->modulesPath.'/'.$slug.'.json'),
                 json_encode($metadata)
             );
         }

@@ -18,7 +18,7 @@ class CascadeDocsTest extends TestCase
         $reflection = new \ReflectionClass(CascadeDocsFacade::class);
         $method = $reflection->getMethod('getFacadeAccessor');
         $method->setAccessible(true);
-        
-        $this->assertEquals(CascadeDocs::class, $method->invoke(new CascadeDocsFacade()));
+
+        $this->assertEquals(CascadeDocs::class, $method->invoke(new CascadeDocsFacade));
     }
 }

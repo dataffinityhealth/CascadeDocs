@@ -391,7 +391,6 @@ it('requires minimum files in directory for suggestion', function () {
     @rmdir($metadataPath);
 });
 
-
 afterEach(function () {
     // Clean up test directories
     $metadataPath = base_path('docs/source_documents/modules/metadata/');

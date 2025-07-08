@@ -16,20 +16,20 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path('docs'));
         File::ensureDirectoryExists(base_path('docs/source_documents/modules/metadata'));
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.modules.metadata', 'docs/source_documents/modules/metadata/');
         Config::set('cascadedocs.paths.tracking.module_assignment', 'docs/module-assignment-log.json');
-        
+
         // Prevent any real HTTP requests
         Http::preventStrayRequests();
         Http::fake();
-        
-        $this->service = new ModuleAssignmentAIService();
+
+        $this->service = new ModuleAssignmentAIService;
     }
 
     protected function tearDown(): void
@@ -37,7 +37,7 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
         if (File::exists(base_path('docs'))) {
             File::deleteDirectory(base_path('docs'));
         }
-        
+
         Mockery::close();
         parent::tearDown();
     }
@@ -52,7 +52,7 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'files' => ['app/Services/AuthService.php'],
                     'module' => 'auth',
                     'confidence' => 0.9,
-                    'reasoning' => 'Authentication service'
+                    'reasoning' => 'Authentication service',
                 ],
                 // Low confidence assignment
                 [
@@ -60,7 +60,7 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'files' => ['app/Services/MaybeAuthService.php'],
                     'module' => 'auth',
                     'confidence' => 0.5,
-                    'reasoning' => 'Possibly authentication related'
+                    'reasoning' => 'Possibly authentication related',
                 ],
                 // Assignment to non-existent module
                 [
@@ -68,7 +68,7 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'files' => ['app/Services/NonExistentService.php'],
                     'module' => 'non-existent',
                     'confidence' => 0.9,
-                    'reasoning' => 'Should fail'
+                    'reasoning' => 'Should fail',
                 ],
                 // Valid new module
                 [
@@ -78,7 +78,7 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'module_slug' => 'payment-processing',
                     'description' => 'Handles payments',
                     'confidence' => 0.85,
-                    'reasoning' => 'Payment functionality'
+                    'reasoning' => 'Payment functionality',
                 ],
                 // Invalid new module (missing required fields)
                 [
@@ -88,32 +88,32 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     // Missing module_slug and description
                     'confidence' => 0.85,
                 ],
-            ]
+            ],
         ];
-        
+
         // Create auth module
         File::put(base_path('docs/source_documents/modules/metadata/auth.json'), json_encode([
             'module_slug' => 'auth',
             'module_name' => 'Authentication',
-            'files' => []
+            'files' => [],
         ]));
-        
+
         $processed = $this->service->processAIRecommendations($recommendations, 0.7);
-        
+
         // Check high confidence assignment
         $this->assertCount(1, $processed['assign_to_existing']);
         $this->assertEquals('auth', $processed['assign_to_existing'][0]['module']);
-        
+
         // Check low confidence assignment
         $this->assertCount(1, $processed['low_confidence']);
         $this->assertEquals(0.5, $processed['low_confidence'][0]['confidence']);
-        
+
         // Check errors
         $this->assertContains('Module not found: non-existent', $processed['errors']);
         $this->assertContains('Invalid module data for: Invalid Module', $processed['errors']);
-        
+
         // Check new module (might not be created due to validation in processAIRecommendations)
-        if (!empty($processed['create_new_modules'])) {
+        if (! empty($processed['create_new_modules'])) {
             $this->assertEquals('payment-processing', $processed['create_new_modules'][0]['slug']);
         }
     }
@@ -125,28 +125,28 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
             'module_slug' => 'auth',
             'module_name' => 'Authentication',
             'files' => [],
-            'undocumented_files' => []
+            'undocumented_files' => [],
         ]));
-        
+
         $assignments = [
             [
                 'module' => 'auth',
                 'files' => ['app/Services/AuthService.php', 'app/Models/User.php'],
-                'confidence' => 0.9
+                'confidence' => 0.9,
             ],
             [
                 'module' => 'non-existent',
                 'files' => ['app/Services/NonExistent.php'],
-                'confidence' => 0.8
-            ]
+                'confidence' => 0.8,
+            ],
         ];
-        
+
         $results = $this->service->applyModuleAssignments($assignments);
-        
+
         $this->assertCount(1, $results['success']);
         $this->assertEquals('auth', $results['success'][0]['module']);
         $this->assertEquals(2, $results['success'][0]['files_added']);
-        
+
         $this->assertCount(1, $results['failed']);
         $this->assertEquals('non-existent', $results['failed'][0]['module']);
     }
@@ -159,7 +159,7 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                 'slug' => 'payment-processing',
                 'description' => 'Handles all payment related functionality',
                 'files' => ['app/Services/PaymentService.php', 'app/Models/Payment.php'],
-                'confidence' => 0.85
+                'confidence' => 0.85,
             ],
             // Module with existing slug
             [
@@ -167,23 +167,23 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                 'slug' => 'existing-module',
                 'description' => 'This should fail',
                 'files' => ['app/Services/ExistingService.php'],
-                'confidence' => 0.9
-            ]
+                'confidence' => 0.9,
+            ],
         ];
-        
+
         // Create existing module
         File::put(base_path('docs/source_documents/modules/metadata/existing-module.json'), json_encode([
             'module_slug' => 'existing-module',
             'module_name' => 'Existing Module',
-            'files' => []
+            'files' => [],
         ]));
-        
+
         $results = $this->service->createNewModules($modules);
-        
+
         $this->assertCount(1, $results['success']);
         $this->assertEquals('payment-processing', $results['success'][0]['module']);
         $this->assertEquals(2, $results['success'][0]['files_added']);
-        
+
         $this->assertCount(1, $results['failed']);
         $this->assertStringContainsString('already exists', $results['failed'][0]['reason']);
     }
@@ -199,18 +199,18 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'module_slug' => 'test-module',
                     'description' => 'Test description',
                     'files' => ['file1.php'],
-                    'confidence' => 0.9
-                ]
-            ]
+                    'confidence' => 0.9,
+                ],
+            ],
         ];
-        
+
         $processed = $this->service->processAIRecommendations($validData);
         // Validate that the module data is properly processed
         $this->assertIsArray($processed['create_new_modules']);
         if (count($processed['create_new_modules']) > 0) {
             $this->assertEquals('test-module', $processed['create_new_modules'][0]['slug']);
         }
-        
+
         // Invalid slug format
         $invalidSlug = [
             'assignments' => [
@@ -220,15 +220,15 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'module_slug' => 'Test Module', // Contains space
                     'description' => 'Test description',
                     'files' => ['file1.php'],
-                    'confidence' => 0.9
-                ]
-            ]
+                    'confidence' => 0.9,
+                ],
+            ],
         ];
-        
+
         $processed = $this->service->processAIRecommendations($invalidSlug);
         $this->assertEmpty($processed['create_new_modules']);
         $this->assertContains('Invalid module data for: Test Module', $processed['errors']);
-        
+
         // Missing required field
         $missingField = [
             'assignments' => [
@@ -238,14 +238,14 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'module_slug' => 'test-module',
                     // Missing description
                     'files' => ['file1.php'],
-                    'confidence' => 0.9
-                ]
-            ]
+                    'confidence' => 0.9,
+                ],
+            ],
         ];
-        
+
         $processed = $this->service->processAIRecommendations($missingField);
         $this->assertEmpty($processed['create_new_modules']);
-        
+
         // Empty required field
         $emptyField = [
             'assignments' => [
@@ -255,11 +255,11 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
                     'module_slug' => 'test-module',
                     'description' => 'Test description',
                     'files' => [], // Empty files
-                    'confidence' => 0.9
-                ]
-            ]
+                    'confidence' => 0.9,
+                ],
+            ],
         ];
-        
+
         $processed = $this->service->processAIRecommendations($emptyField);
         $this->assertEmpty($processed['create_new_modules']);
     }
@@ -271,22 +271,22 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
             'module_slug' => 'auth',
             'module_name' => 'Authentication',
             'module_summary' => 'Handles user authentication',
-            'statistics' => ['total_files' => 5]
+            'statistics' => ['total_files' => 5],
         ]));
-        
+
         $unassignedDocs = collect([
             'app/Services/NewService.php' => [
                 'short_doc' => 'New service documentation',
-                'related_files' => ['app/Models/NewModel.php']
-            ]
+                'related_files' => ['app/Models/NewModel.php'],
+            ],
         ]);
-        
+
         $moduleSummaries = collect([
-            'auth' => 'Authentication module summary'
+            'auth' => 'Authentication module summary',
         ]);
-        
+
         $prompt = $this->service->buildModuleAssignmentPrompt($unassignedDocs, $moduleSummaries);
-        
+
         $this->assertStringContainsString('Module Assignment Task', $prompt);
         $this->assertStringContainsString('Authentication', $prompt);
         $this->assertStringContainsString('app/Services/NewService.php', $prompt);
@@ -298,26 +298,26 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
         // Configure content path where module markdown files are
         Config::set('cascadedocs.paths.modules.content', 'docs/source_documents/modules/content/');
         File::ensureDirectoryExists(base_path('docs/source_documents/modules/content'));
-        
+
         // Create test modules metadata
         File::put(base_path('docs/source_documents/modules/metadata/auth.json'), json_encode([
             'module_slug' => 'auth',
             'module_name' => 'Authentication',
-            'module_summary' => 'Handles authentication'
+            'module_summary' => 'Handles authentication',
         ]));
-        
+
         File::put(base_path('docs/source_documents/modules/metadata/payment.json'), json_encode([
             'module_slug' => 'payment',
             'module_name' => 'Payment',
-            'module_summary' => null // No summary
+            'module_summary' => null, // No summary
         ]));
-        
+
         // Create module content files
         File::put(base_path('docs/source_documents/modules/content/auth.md'), "# Authentication\n\nHandles authentication");
         File::put(base_path('docs/source_documents/modules/content/payment.md'), "# Payment\n\nPayment processing");
-        
+
         $summaries = $this->service->extractModuleSummaries();
-        
+
         $this->assertCount(2, $summaries);
         $this->assertNotEmpty($summaries['auth']);
         $this->assertNotEmpty($summaries['payment']);
@@ -329,17 +329,17 @@ class ModuleAssignmentAIServiceAdditionalTest extends TestCase
         $log = [
             'unassigned_files' => [
                 'app/Services/UnassignedService.php',
-                'app/Models/UnassignedModel.php'
-            ]
+                'app/Models/UnassignedModel.php',
+            ],
         ];
         File::put(base_path('docs/module-assignment-log.json'), json_encode($log));
-        
+
         $docs = $this->service->getUnassignedFilesWithDocs();
-        
+
         $this->assertCount(2, $docs);
         $this->assertArrayHasKey('app/Services/UnassignedService.php', $docs);
         $this->assertArrayHasKey('app/Models/UnassignedModel.php', $docs);
-        
+
         // Each doc should have the expected structure
         foreach ($docs as $file => $data) {
             $this->assertArrayHasKey('path', $data);

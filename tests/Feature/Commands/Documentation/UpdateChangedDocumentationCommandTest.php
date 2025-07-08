@@ -10,19 +10,20 @@ use Lumiio\CascadeDocs\Tests\TestCase;
 class UpdateChangedDocumentationCommandTest extends TestCase
 {
     protected string $testPath;
+
     protected string $logPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->testPath = 'tests/fixtures/update-changed-docs';
         $this->logPath = 'docs/documentation-update-log.json';
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.logs', 'docs/');
         Config::set('cascadedocs.ai.default_model', 'gpt-4');
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path('docs'));
     }
@@ -33,15 +34,15 @@ class UpdateChangedDocumentationCommandTest extends TestCase
         if (File::exists(base_path($this->testPath))) {
             File::deleteDirectory(base_path($this->testPath));
         }
-        
+
         if (File::exists(base_path($this->logPath))) {
             File::delete(base_path($this->logPath));
         }
-        
+
         if (File::exists(base_path('docs/module-assignment-log.json'))) {
             File::delete(base_path('docs/module-assignment-log.json'));
         }
-        
+
         parent::tearDown();
     }
 
@@ -58,21 +59,21 @@ class UpdateChangedDocumentationCommandTest extends TestCase
 
     public function test_command_has_correct_name(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
         $this->assertEquals('cascadedocs:update-changed', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
         $this->assertEquals('Update documentation for all changed files, modules, and architecture', $command->getDescription());
     }
 
     public function test_command_accepts_from_sha_option(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
         $definition = $command->getDefinition();
-        
+
         $this->assertTrue($definition->hasOption('from-sha'));
         $option = $definition->getOption('from-sha');
         $this->assertEquals('Git SHA to compare from (defaults to last documented SHA)', $option->getDescription());
@@ -80,9 +81,9 @@ class UpdateChangedDocumentationCommandTest extends TestCase
 
     public function test_command_accepts_to_sha_option(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
         $definition = $command->getDefinition();
-        
+
         $this->assertTrue($definition->hasOption('to-sha'));
         $option = $definition->getOption('to-sha');
         $this->assertEquals('Git SHA to compare to', $option->getDescription());
@@ -91,9 +92,9 @@ class UpdateChangedDocumentationCommandTest extends TestCase
 
     public function test_command_accepts_model_option(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
         $definition = $command->getDefinition();
-        
+
         $this->assertTrue($definition->hasOption('model'));
         $option = $definition->getOption('model');
         $this->assertEquals('The AI model to use for generation', $option->getDescription());
@@ -101,9 +102,9 @@ class UpdateChangedDocumentationCommandTest extends TestCase
 
     public function test_command_accepts_auto_commit_option(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
         $definition = $command->getDefinition();
-        
+
         $this->assertTrue($definition->hasOption('auto-commit'));
         $option = $definition->getOption('auto-commit');
         $this->assertEquals('Automatically commit documentation changes', $option->getDescription());
@@ -129,7 +130,7 @@ class UpdateChangedDocumentationCommandTest extends TestCase
         // Create update log with last SHA
         $log = [
             'last_git_sha' => 'def456',
-            'last_update' => now()->toIso8601String()
+            'last_update' => now()->toIso8601String(),
         ];
         File::put(base_path($this->logPath), json_encode($log));
 
@@ -168,7 +169,7 @@ class UpdateChangedDocumentationCommandTest extends TestCase
 
         $this->artisan('cascadedocs:update-changed', [
             '--from-sha' => 'custom-from',
-            '--to-sha' => 'custom-to'
+            '--to-sha' => 'custom-to',
         ])
             ->expectsOutput('Comparing from: custom-from')
             ->expectsOutput('Comparing to: custom-to')
@@ -181,9 +182,9 @@ class UpdateChangedDocumentationCommandTest extends TestCase
         $log = [
             'modules' => [
                 'new-module' => [
-                    'created_at' => now()->subMinutes(5)->toIso8601String()
-                ]
-            ]
+                    'created_at' => now()->subMinutes(5)->toIso8601String(),
+                ],
+            ],
         ];
         File::put(base_path('docs/module-assignment-log.json'), json_encode($log));
 
@@ -198,7 +199,7 @@ class UpdateChangedDocumentationCommandTest extends TestCase
         // Create update log
         $log = [
             'last_git_sha' => 'test-sha',
-            'last_update' => '2024-01-01T00:00:00Z'
+            'last_update' => '2024-01-01T00:00:00Z',
         ];
         File::put(base_path($this->logPath), json_encode($log));
 
@@ -212,11 +213,10 @@ class UpdateChangedDocumentationCommandTest extends TestCase
     {
         // Test that the command uses the configured log path
         Config::set('cascadedocs.paths.logs', 'custom-logs/');
-        
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand();
-        
+
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateChangedDocumentationCommand;
+
         // The command should use the configured path
         $this->assertEquals('custom-logs/', config('cascadedocs.paths.logs'));
     }
-
 }

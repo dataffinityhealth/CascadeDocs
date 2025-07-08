@@ -13,14 +13,14 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->testLogPath = 'tests/fixtures/analyze-command';
-        Config::set('cascadedocs.paths.tracking.module_assignment', $this->testLogPath . '/assignment.json');
-        Config::set('cascadedocs.paths.modules.metadata', $this->testLogPath . '/metadata');
-        
+        Config::set('cascadedocs.paths.tracking.module_assignment', $this->testLogPath.'/assignment.json');
+        Config::set('cascadedocs.paths.modules.metadata', $this->testLogPath.'/metadata');
+
         // Create test directories
         File::ensureDirectoryExists(base_path($this->testLogPath));
-        File::ensureDirectoryExists(base_path($this->testLogPath . '/metadata'));
+        File::ensureDirectoryExists(base_path($this->testLogPath.'/metadata'));
     }
 
     protected function tearDown(): void
@@ -52,15 +52,15 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             'last_analysis' => '2024-01-01T12:00:00+00:00',
             'assigned_files' => [
                 'authentication' => ['app/Models/User.php', 'app/Controllers/AuthController.php'],
-                'blog' => ['app/Models/Post.php']
+                'blog' => ['app/Models/Post.php'],
             ],
             'unassigned_files' => ['app/Helpers/StringHelper.php'],
             'potential_modules' => [],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ];
 
         File::put(
-            base_path($this->testLogPath . '/assignment.json'),
+            base_path($this->testLogPath.'/assignment.json'),
             json_encode($analysisLog)
         );
 
@@ -76,15 +76,15 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
         $analysisLog = [
             'last_analysis' => '2024-01-01T12:00:00+00:00',
             'assigned_files' => [
-                'authentication' => ['app/Models/User.php', 'app/Controllers/AuthController.php']
+                'authentication' => ['app/Models/User.php', 'app/Controllers/AuthController.php'],
             ],
             'unassigned_files' => ['app/Helpers/StringHelper.php'],
             'potential_modules' => [],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ];
 
         File::put(
-            base_path($this->testLogPath . '/assignment.json'),
+            base_path($this->testLogPath.'/assignment.json'),
             json_encode($analysisLog)
         );
 
@@ -106,21 +106,21 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             'potential_modules' => [
                 'payment-processing' => [
                     'suggested_name' => 'payment-processing',
-                    'files' => ['app/Models/Payment.php', 'app/Services/PaymentService.php']
-                ]
+                    'files' => ['app/Models/Payment.php', 'app/Services/PaymentService.php'],
+                ],
             ],
             'module_suggestions' => [
                 [
                     'suggested_name' => 'payment-processing',
                     'file_count' => 2,
                     'confidence' => 0.85,
-                    'reason' => 'Files related to payment processing functionality'
-                ]
-            ]
+                    'reason' => 'Files related to payment processing functionality',
+                ],
+            ],
         ];
 
         File::put(
-            base_path($this->testLogPath . '/assignment.json'),
+            base_path($this->testLogPath.'/assignment.json'),
             json_encode($analysisLog)
         );
 
@@ -141,11 +141,11 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             'assigned_files' => [],
             'unassigned_files' => [],
             'potential_modules' => [],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ];
 
         File::put(
-            base_path($this->testLogPath . '/assignment.json'),
+            base_path($this->testLogPath.'/assignment.json'),
             json_encode($analysisLog)
         );
 
@@ -162,11 +162,11 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             'assigned_files' => [],
             'unassigned_files' => ['app/Helpers/StringHelper.php', 'app/Utils/ArrayHelper.php'],
             'potential_modules' => [],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ];
 
         File::put(
-            base_path($this->testLogPath . '/assignment.json'),
+            base_path($this->testLogPath.'/assignment.json'),
             json_encode($analysisLog)
         );
 
@@ -183,18 +183,18 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             'last_analysis' => '2024-01-01T12:00:00+00:00',
             'assigned_files' => [
                 'auth' => ['app/Models/User.php'],
-                'blog' => ['app/Models/Post.php', 'app/Controllers/PostController.php']
+                'blog' => ['app/Models/Post.php', 'app/Controllers/PostController.php'],
             ],
             'unassigned_files' => ['app/Helpers/StringHelper.php'],
             'potential_modules' => [
                 'potential1' => ['files' => []],
-                'potential2' => ['files' => []]
+                'potential2' => ['files' => []],
             ],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ];
 
         File::put(
-            base_path($this->testLogPath . '/assignment.json'),
+            base_path($this->testLogPath.'/assignment.json'),
             json_encode($analysisLog)
         );
 

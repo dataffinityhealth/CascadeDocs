@@ -7,31 +7,31 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateDocumentationForFileJob;
-use Lumiio\CascadeDocs\Jobs\Documentation\UpdateModuleDocumentationJob;
 use Lumiio\CascadeDocs\Tests\TestCase;
 
 class UpdateDocumentationForChangedFilesCommandTest extends TestCase
 {
     protected string $testPath;
+
     protected string $updateLogPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->testPath = 'tests/fixtures/update-docs';
         $this->updateLogPath = 'docs/documentation-update-log.json';
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path('docs'));
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.tracking.documentation_update', $this->updateLogPath);
         Config::set('cascadedocs.ai.default_model', 'gpt-4');
         Config::set('cascadedocs.file_types', ['php', 'js', 'vue']);
         Config::set('cascadedocs.paths.source', ['app/', 'resources/js/']);
         Config::set('queue.default', 'sync');
-        
+
         // Fake the queue
         Queue::fake();
     }
@@ -42,11 +42,11 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
         if (File::exists(base_path($this->testPath))) {
             File::deleteDirectory(base_path($this->testPath));
         }
-        
+
         if (File::exists(base_path('docs'))) {
             File::deleteDirectory(base_path('docs'));
         }
-        
+
         parent::tearDown();
     }
 
@@ -63,13 +63,13 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
 
     public function test_command_has_correct_name(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationForChangedFilesCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationForChangedFilesCommand;
         $this->assertEquals('update:documentation', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationForChangedFilesCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationForChangedFilesCommand;
         $this->assertEquals('Update documentation for files that have changed since the last update', $command->getDescription());
     }
 
@@ -80,7 +80,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => null,
             'last_update_timestamp' => null,
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation')
@@ -103,7 +103,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation')
@@ -125,7 +125,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation')
@@ -153,16 +153,16 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         // Create module assignment log for module tracking
         File::put(base_path('docs/module-assignment-log.json'), json_encode([
             'assigned_files' => [
                 'auth' => ['app/Services/UserService.php', 'app/Models/User.php'],
-                'ui' => ['resources/js/components/Button.vue']
+                'ui' => ['resources/js/components/Button.vue'],
             ],
-            'unassigned_files' => []
+            'unassigned_files' => [],
         ]));
 
         $this->artisan('update:documentation')
@@ -175,7 +175,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
 
         // Verify jobs were dispatched
         Queue::assertPushed(UpdateDocumentationForFileJob::class, 3);
-        
+
         // Verify update log was saved
         $savedLog = json_decode(File::get(base_path($this->updateLogPath)), true);
         $this->assertEquals('def456', $savedLog['last_update_sha']);
@@ -197,7 +197,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation', ['--dry-run' => true])
@@ -210,7 +210,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
 
         // Verify no jobs were dispatched
         Queue::assertNothingPushed();
-        
+
         // Verify update log was not changed
         $savedLog = json_decode(File::get(base_path($this->updateLogPath)), true);
         $this->assertEquals('abc123', $savedLog['last_update_sha']);
@@ -230,7 +230,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation', ['--since' => 'custom123'])
@@ -241,7 +241,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
 
     public function test_it_uses_custom_model(): void
     {
-        // Mock git commands  
+        // Mock git commands
         Process::fake([
             'git rev-parse HEAD' => Process::result('def456'),
             'git diff --name-only abc123 def456' => Process::result('app/Services/UserService.php'),
@@ -254,7 +254,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation', ['--model' => 'claude-3'])
@@ -272,8 +272,8 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'git rev-parse HEAD' => Process::result('def456'),
             'git diff --name-only abc123 def456' => Process::result('app/Services/ExistingService.php'),
             'git diff --name-status abc123 def456' => Process::result(
-                "M\tapp/Services/ExistingService.php\n" .
-                "A\tapp/Services/NewService.php\n" .
+                "M\tapp/Services/ExistingService.php\n".
+                "A\tapp/Services/NewService.php\n".
                 "D\tapp/Services/OldService.php"
             ),
             'git log -1 --format=%H -- app/Services/ExistingService.php' => Process::result('def456'),
@@ -285,7 +285,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation')
@@ -320,15 +320,15 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         // Create module assignment
         File::put(base_path('docs/module-assignment-log.json'), json_encode([
             'assigned_files' => [
-                'auth' => ['app/Services/UserService.php']
+                'auth' => ['app/Services/UserService.php'],
             ],
-            'unassigned_files' => []
+            'unassigned_files' => [],
         ]));
 
         $this->artisan('update:documentation')
@@ -344,11 +344,11 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
         Process::fake([
             'git rev-parse HEAD' => Process::result('def456'),
             'git diff --name-only abc123 def456' => Process::result(
-                "app/Services/UserService.php\n" .
-                "config/app.php\n" .
-                "tests/UserTest.php\n" .
-                "vendor/package/file.php\n" .
-                "resources/js/app.js"
+                "app/Services/UserService.php\n".
+                "config/app.php\n".
+                "tests/UserTest.php\n".
+                "vendor/package/file.php\n".
+                'resources/js/app.js'
             ),
             'git diff --name-status abc123 def456' => Process::result(''),
             'git log -1 --format=%H -- app/Services/UserService.php' => Process::result('def456'),
@@ -360,7 +360,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('update:documentation')

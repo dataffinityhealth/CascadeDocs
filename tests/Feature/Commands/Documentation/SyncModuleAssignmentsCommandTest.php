@@ -9,23 +9,26 @@ use Lumiio\CascadeDocs\Tests\TestCase;
 class SyncModuleAssignmentsCommandTest extends TestCase
 {
     protected string $testPath;
+
     protected string $metadataPath;
+
     protected string $contentPath;
+
     protected string $assignmentLogPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->testPath = 'tests/fixtures/sync-module-assignments';
         $this->metadataPath = 'docs/source_documents/modules/metadata';
         $this->contentPath = 'docs/source_documents/modules/content';
         $this->assignmentLogPath = 'docs/module-assignment-log.json';
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path($this->metadataPath));
         File::ensureDirectoryExists(base_path($this->contentPath));
-        
+
         // Configure paths to match what the command expects
         Config::set('cascadedocs.paths.tracking.module_assignment', $this->assignmentLogPath);
     }
@@ -36,15 +39,15 @@ class SyncModuleAssignmentsCommandTest extends TestCase
         if (File::exists(base_path($this->testPath))) {
             File::deleteDirectory(base_path($this->testPath));
         }
-        
+
         if (File::exists(base_path('docs/source_documents'))) {
             File::deleteDirectory(base_path('docs/source_documents'));
         }
-        
+
         if (File::exists(base_path($this->assignmentLogPath))) {
             File::delete(base_path($this->assignmentLogPath));
         }
-        
+
         parent::tearDown();
     }
 
@@ -70,12 +73,12 @@ class SyncModuleAssignmentsCommandTest extends TestCase
             'module_name' => 'Authentication',
             'files' => [
                 ['path' => 'app/Services/AuthService.php'],
-                ['path' => 'app/Models/User.php']
+                ['path' => 'app/Models/User.php'],
             ],
-            'undocumented_files' => ['app/Http/Middleware/Authenticate.php']
+            'undocumented_files' => ['app/Http/Middleware/Authenticate.php'],
         ];
-        
-        File::put(base_path($this->metadataPath . '/auth.json'), json_encode($metadata));
+
+        File::put(base_path($this->metadataPath.'/auth.json'), json_encode($metadata));
 
         $this->artisan('documentation:sync-module-assignments')
             ->expectsOutput('Syncing module assignments from module metadata and documentation files...')
@@ -104,8 +107,8 @@ The module also includes `app/Http/Middleware/Authenticate.php` for middleware s
 
 `resources/js/components/LoginForm.vue` handles the frontend.
 MD;
-        
-        File::put(base_path($this->contentPath . '/auth.md'), $markdown);
+
+        File::put(base_path($this->contentPath.'/auth.md'), $markdown);
 
         $this->artisan('documentation:sync-module-assignments')
             ->expectsOutputToContain('auth: 5 files')
@@ -120,12 +123,12 @@ MD;
             'module_name' => 'User Management',
             'files' => [
                 ['path' => 'app/Models/User.php'],
-                ['path' => 'app/Models/UserProfile.php']
-            ]
+                ['path' => 'app/Models/UserProfile.php'],
+            ],
         ];
-        
-        File::put(base_path($this->metadataPath . '/users.json'), json_encode($metadata));
-        
+
+        File::put(base_path($this->metadataPath.'/users.json'), json_encode($metadata));
+
         // Create markdown with additional files
         $markdown = <<<'MD'
 # User Management Module
@@ -135,8 +138,8 @@ Files:
 - `app/Controllers/UserController.php` - User controller
 - `app/Services/UserService.php` - User service
 MD;
-        
-        File::put(base_path($this->contentPath . '/users.md'), $markdown);
+
+        File::put(base_path($this->contentPath.'/users.md'), $markdown);
 
         $this->artisan('documentation:sync-module-assignments')
             ->expectsOutputToContain('users: 4 files') // Should merge to 4 unique files
@@ -149,18 +152,18 @@ MD;
         $metadata = [
             'module_slug' => 'api',
             'module_name' => 'API',
-            'files' => [['path' => 'app/Http/Controllers/ApiController.php']]
+            'files' => [['path' => 'app/Http/Controllers/ApiController.php']],
         ];
-        
-        File::put(base_path($this->metadataPath . '/api.json'), json_encode($metadata));
+
+        File::put(base_path($this->metadataPath.'/api.json'), json_encode($metadata));
 
         $this->artisan('documentation:sync-module-assignments', [
-            '--dry-run' => true
+            '--dry-run' => true,
         ])
             ->expectsOutputToContain('api: 1 files')
             ->expectsOutputToContain('Dry run mode - no changes made.')
             ->run();
-        
+
         // Assignment log should not be created in dry run mode
         $this->assertFalse(File::exists(base_path($this->assignmentLogPath)));
     }
@@ -169,10 +172,10 @@ MD;
     {
         // Create test markdown
         $markdown = '# Test Module\n\n- `app/Services/TestService.php` - Test service';
-        File::put(base_path($this->contentPath . '/test.md'), $markdown);
+        File::put(base_path($this->contentPath.'/test.md'), $markdown);
 
         $this->artisan('documentation:sync-module-assignments', [
-            '--detailed' => true
+            '--detailed' => true,
         ])
             ->expectsOutputToContain('Parsing module documentation: test')
             ->expectsOutputToContain('Found: app/Services/TestService.php')
@@ -183,15 +186,15 @@ MD;
     public function test_it_ignores_non_json_metadata_files(): void
     {
         // Create non-JSON file
-        File::put(base_path($this->metadataPath . '/readme.txt'), 'This is not JSON');
-        
+        File::put(base_path($this->metadataPath.'/readme.txt'), 'This is not JSON');
+
         // Create valid JSON file
         $metadata = [
             'module_slug' => 'valid',
             'module_name' => 'Valid Module',
-            'files' => [['path' => 'app/Models/Valid.php']]
+            'files' => [['path' => 'app/Models/Valid.php']],
         ];
-        File::put(base_path($this->metadataPath . '/valid.json'), json_encode($metadata));
+        File::put(base_path($this->metadataPath.'/valid.json'), json_encode($metadata));
 
         $this->artisan('documentation:sync-module-assignments')
             ->expectsOutputToContain('valid: 1 files')
@@ -202,10 +205,10 @@ MD;
     public function test_it_ignores_non_markdown_content_files(): void
     {
         // Create non-markdown file
-        File::put(base_path($this->contentPath . '/test.txt'), 'app/Services/TestService.php');
-        
+        File::put(base_path($this->contentPath.'/test.txt'), 'app/Services/TestService.php');
+
         // Create valid markdown file
-        File::put(base_path($this->contentPath . '/valid.md'), '`app/Models/Valid.php`');
+        File::put(base_path($this->contentPath.'/valid.md'), '`app/Models/Valid.php`');
 
         $this->artisan('documentation:sync-module-assignments')
             ->expectsOutputToContain('valid: 1 files')
@@ -225,8 +228,8 @@ MD;
 - `app/Services/Test.txt` - Invalid extension
 - `app/Services/Valid.php` - This one is valid
 MD;
-        
-        File::put(base_path($this->contentPath . '/test.md'), $markdown);
+
+        File::put(base_path($this->contentPath.'/test.md'), $markdown);
 
         $this->artisan('documentation:sync-module-assignments')
             ->expectsOutputToContain('test: 1 files') // Should only find the valid file
@@ -242,22 +245,22 @@ MD;
             'unassigned_files' => [],
             'do_not_document' => ['app/Services/IgnoreMe.php', 'app/Helpers/Debug.php'],
             'potential_modules' => [],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ];
-        
+
         File::put(base_path($this->assignmentLogPath), json_encode($existingLog));
-        
+
         // Create module with files
         $metadata = [
             'module_slug' => 'test',
             'module_name' => 'Test Module',
-            'files' => [['path' => 'app/Services/TestService.php']]
+            'files' => [['path' => 'app/Services/TestService.php']],
         ];
-        File::put(base_path($this->metadataPath . '/test.json'), json_encode($metadata));
+        File::put(base_path($this->metadataPath.'/test.json'), json_encode($metadata));
 
         $this->artisan('documentation:sync-module-assignments')
             ->run();
-        
+
         // Verify do_not_document files are preserved
         $updatedLog = json_decode(File::get(base_path($this->assignmentLogPath)), true);
         $this->assertEquals(['app/Services/IgnoreMe.php', 'app/Helpers/Debug.php'], $updatedLog['do_not_document']);
@@ -269,24 +272,24 @@ MD;
         $modules = [
             'auth' => ['app/Services/AuthService.php', 'app/Models/User.php'],
             'api' => ['app/Http/Controllers/ApiController.php'],
-            'users' => ['app/Models/UserProfile.php', 'app/Services/UserService.php']
+            'users' => ['app/Models/UserProfile.php', 'app/Services/UserService.php'],
         ];
-        
+
         foreach ($modules as $slug => $files) {
             $metadata = [
                 'module_slug' => $slug,
-                'module_name' => ucfirst($slug) . ' Module',
-                'files' => array_map(fn($path) => ['path' => $path], $files)
+                'module_name' => ucfirst($slug).' Module',
+                'files' => array_map(fn ($path) => ['path' => $path], $files),
             ];
-            File::put(base_path($this->metadataPath . "/{$slug}.json"), json_encode($metadata));
+            File::put(base_path($this->metadataPath."/{$slug}.json"), json_encode($metadata));
         }
 
         $output = $this->artisan('documentation:sync-module-assignments');
-        
+
         // Just verify it runs without errors and finds multiple modules
         $output->expectsOutputToContain('Total modules: 3')
-               ->expectsOutputToContain('Total file references: 5')
-               ->run();
+            ->expectsOutputToContain('Total file references: 5')
+            ->run();
     }
 
     public function test_command_exists(): void
@@ -296,13 +299,13 @@ MD;
 
     public function test_command_has_correct_name(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\SyncModuleAssignmentsCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\SyncModuleAssignmentsCommand;
         $this->assertEquals('documentation:sync-module-assignments', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\SyncModuleAssignmentsCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\SyncModuleAssignmentsCommand;
         $this->assertEquals('Sync module assignments from both module documentation and metadata files', $command->getDescription());
     }
 }

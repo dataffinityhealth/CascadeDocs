@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Lumiio\CascadeDocs\Jobs\Documentation\GenerateAiDocumentationForFileJob;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateDocumentationForFileJob;
-use Lumiio\CascadeDocs\Jobs\Documentation\UpdateModuleDocumentationJob;
 use Lumiio\CascadeDocs\Tests\TestCase;
 
 class UpdateDocumentationAfterMergeCommandTest extends TestCase
@@ -18,18 +17,18 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->updateLogPath = 'docs/documentation-update-log.json';
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path('docs'));
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.tracking.documentation_update', $this->updateLogPath);
         Config::set('cascadedocs.ai.default_model', 'gpt-4');
         Config::set('cascadedocs.file_types', ['php', 'js', 'vue']);
         Config::set('cascadedocs.paths.source', ['app/', 'resources/js/']);
-        
+
         // Fake the queue
         Queue::fake();
     }
@@ -40,7 +39,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
         if (File::exists(base_path('docs'))) {
             File::deleteDirectory(base_path('docs'));
         }
-        
+
         parent::tearDown();
     }
 
@@ -57,13 +56,13 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
 
     public function test_command_has_correct_name(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand;
         $this->assertEquals('documentation:update-after-merge', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand;
         $this->assertEquals('Complete documentation update workflow after merging a branch', $command->getDescription());
     }
 
@@ -74,7 +73,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => null,
             'last_update_timestamp' => null,
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('documentation:update-after-merge')
@@ -95,7 +94,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('documentation:update-after-merge')
@@ -117,7 +116,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('documentation:update-after-merge')
@@ -142,7 +141,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('documentation:update-after-merge', ['--dry-run' => true])
@@ -171,7 +170,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         $this->artisan('documentation:update-after-merge', ['--since' => 'custom123'])
@@ -182,7 +181,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
 
     public function test_it_uses_custom_model(): void
     {
-        // Mock git commands  
+        // Mock git commands
         Process::fake([
             'git rev-parse HEAD' => Process::result('def456'),
             'git diff --name-only abc123 def456' => Process::result(''),
@@ -196,13 +195,13 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         // Create empty module assignment log to avoid issues
         File::put(base_path('docs/module-assignment-log.json'), json_encode([
             'assigned_files' => [],
-            'unassigned_files' => []
+            'unassigned_files' => [],
         ]));
 
         $this->artisan('documentation:update-after-merge', ['--model' => 'claude-3'])
@@ -221,8 +220,8 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'git rev-parse HEAD' => Process::result('def456'),
             'git diff --name-only abc123 def456' => Process::result('app/Services/ExistingService.php'),
             'git diff --name-status abc123 def456' => Process::result(
-                "M\tapp/Services/ExistingService.php\n" .
-                "A\tapp/Services/NewService.php\n" .
+                "M\tapp/Services/ExistingService.php\n".
+                "A\tapp/Services/NewService.php\n".
                 "D\tapp/Services/OldService.php"
             ),
         ]);
@@ -232,15 +231,15 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         // Create module assignment log
         File::put(base_path('docs/module-assignment-log.json'), json_encode([
             'assigned_files' => [
-                'services' => ['app/Services/ExistingService.php', 'app/Services/OldService.php']
+                'services' => ['app/Services/ExistingService.php', 'app/Services/OldService.php'],
             ],
-            'unassigned_files' => []
+            'unassigned_files' => [],
         ]));
 
         $this->artisan('documentation:update-after-merge')
@@ -269,7 +268,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'last_update_sha' => 'abc123',
             'last_update_timestamp' => '2024-01-01T00:00:00Z',
             'files' => [],
-            'modules' => []
+            'modules' => [],
         ]));
 
         // Create module assignment log with many unassigned files
@@ -277,10 +276,10 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
         for ($i = 1; $i <= 500; $i++) {
             $unassignedFiles[] = "app/Services/Service{$i}.php";
         }
-        
+
         File::put(base_path('docs/module-assignment-log.json'), json_encode([
             'assigned_files' => [],
-            'unassigned_files' => $unassignedFiles
+            'unassigned_files' => $unassignedFiles,
         ]));
 
         $this->artisan('documentation:update-after-merge', ['--limit' => 10])
@@ -290,14 +289,14 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
 
     public function test_command_accepts_all_options(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand;
         $definition = $command->getDefinition();
-        
+
         $this->assertTrue($definition->hasOption('since'));
         $this->assertTrue($definition->hasOption('model'));
         $this->assertTrue($definition->hasOption('dry-run'));
         $this->assertTrue($definition->hasOption('limit'));
-        
+
         $limitOption = $definition->getOption('limit');
         $this->assertEquals('400', $limitOption->getDefault());
     }

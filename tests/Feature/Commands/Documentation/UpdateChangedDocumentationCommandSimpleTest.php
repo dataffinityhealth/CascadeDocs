@@ -14,18 +14,18 @@ class UpdateChangedDocumentationCommandSimpleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.logs', 'docs/');
         Config::set('cascadedocs.ai.default_model', 'gpt-4');
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path('docs'));
-        
+
         // Prevent any real HTTP requests
         Http::preventStrayRequests();
         Http::fake();
-        
+
         // Fake queue to prevent actual job dispatch
         Queue::fake();
     }
@@ -35,7 +35,7 @@ class UpdateChangedDocumentationCommandSimpleTest extends TestCase
         if (File::exists(base_path('docs'))) {
             File::deleteDirectory(base_path('docs'));
         }
-        
+
         parent::tearDown();
     }
 
@@ -59,7 +59,7 @@ class UpdateChangedDocumentationCommandSimpleTest extends TestCase
         // Create update log
         File::put(base_path('docs/documentation-update-log.json'), json_encode([
             'last_git_sha' => 'def456',
-            'last_update' => now()->toIso8601String()
+            'last_update' => now()->toIso8601String(),
         ]));
 
         // Mock Process
@@ -82,7 +82,7 @@ class UpdateChangedDocumentationCommandSimpleTest extends TestCase
 
         $this->artisan('cascadedocs:update-changed', [
             '--from-sha' => 'custom-from',
-            '--to-sha' => 'custom-to'
+            '--to-sha' => 'custom-to',
         ])
             ->expectsOutput('Comparing from: custom-from')
             ->expectsOutput('Comparing to: custom-to')

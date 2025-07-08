@@ -15,16 +15,16 @@ class GenerateModuleDocumentationCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->moduleAssignmentLogPath = 'docs/module-assignment-log.json';
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path('docs'));
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.tracking.module_assignment', $this->moduleAssignmentLogPath);
         Config::set('cascadedocs.ai.default_model', 'gpt-4');
-        
+
         // Prevent any real HTTP requests and mock all by default
         Http::preventStrayRequests();
         Http::fake();
@@ -36,7 +36,7 @@ class GenerateModuleDocumentationCommandTest extends TestCase
         if (File::exists(base_path('docs'))) {
             File::deleteDirectory(base_path('docs'));
         }
-        
+
         parent::tearDown();
     }
 
@@ -47,23 +47,22 @@ class GenerateModuleDocumentationCommandTest extends TestCase
 
     public function test_command_has_correct_signature(): void
     {
-        $command = new GenerateModuleDocumentationCommand();
+        $command = new GenerateModuleDocumentationCommand;
         $this->assertEquals('cascadedocs:generate-module-docs', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
     {
-        $command = new GenerateModuleDocumentationCommand();
+        $command = new GenerateModuleDocumentationCommand;
         $this->assertEquals('Generate module documentation by organizing files and creating module overviews', $command->getDescription());
     }
 
     public function test_command_accepts_all_options(): void
     {
-        $command = new GenerateModuleDocumentationCommand();
+        $command = new GenerateModuleDocumentationCommand;
         $definition = $command->getDefinition();
-        
+
         $this->assertTrue($definition->hasOption('model'));
         $this->assertTrue($definition->hasOption('fresh'));
     }
-
 }

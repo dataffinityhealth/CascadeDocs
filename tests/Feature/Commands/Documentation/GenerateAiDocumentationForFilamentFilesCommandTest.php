@@ -4,7 +4,6 @@ namespace Lumiio\CascadeDocs\Tests\Feature\Commands\Documentation;
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
 use Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand;
 use Lumiio\CascadeDocs\Tests\TestCase;
 use Mockery;
@@ -12,24 +11,26 @@ use Mockery;
 class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
 {
     protected string $testPath;
+
     protected string $livewirePath;
+
     protected string $docsPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->testPath = 'tests/fixtures/filament-docs';
         $this->livewirePath = 'app/Livewire';
         $this->docsPath = 'docs/code';
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.code_documentation', $this->docsPath);
         Config::set('cascadedocs.filament.livewire_path', $this->livewirePath);
         Config::set('cascadedocs.filament.namespace_pattern', 'use Filament\\');
         Config::set('cascadedocs.ai.filament_model', 'claude-3-5-haiku-20241022');
         Config::set('cascadedocs.permissions.directory', 0755);
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path($this->livewirePath));
         File::ensureDirectoryExists(base_path($this->docsPath));
@@ -41,15 +42,15 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
         if (File::exists(base_path($this->testPath))) {
             File::deleteDirectory(base_path($this->testPath));
         }
-        
+
         if (File::exists(base_path($this->livewirePath))) {
             File::deleteDirectory(base_path($this->livewirePath));
         }
-        
+
         if (File::exists(base_path($this->docsPath))) {
             File::deleteDirectory(base_path($this->docsPath));
         }
-        
+
         parent::tearDown();
     }
 
@@ -66,13 +67,13 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
 
     public function test_command_has_correct_name(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand;
         $this->assertEquals('generate:ai-documentation-for-filament-files', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand;
         $this->assertEquals('Generate AI documentation for Filament files in the Livewire directory', $command->getDescription());
     }
 
@@ -131,9 +132,9 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
     {
         // Create a Filament file
         $this->createFilamentFile('UserResource.php');
-        
+
         // Create existing documentation
-        $docPath = base_path($this->docsPath . '/Livewire/UserResource.md');
+        $docPath = base_path($this->docsPath.'/Livewire/UserResource.md');
         File::ensureDirectoryExists(dirname($docPath));
         File::put($docPath, '# Existing Documentation');
 
@@ -153,7 +154,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
 
         // Capture the prompt
         $capturedPrompt = null;
-        
+
         // Mock the command
         $this->instance(
             GenerateAiDocumentationForFilamentFilesCommand::class,
@@ -163,6 +164,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->once()
                 ->withArgs(function ($prompt) use (&$capturedPrompt) {
                     $capturedPrompt = $prompt;
+
                     return true;
                 })
                 ->andReturn('## Generated Documentation')
@@ -204,8 +206,8 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
             ->assertExitCode(0);
 
         // Check nested documentation was created
-        $this->assertTrue(File::exists(base_path($this->docsPath . '/Livewire/Resources/UserResource.md')));
-        $this->assertTrue(File::exists(base_path($this->docsPath . '/Livewire/Resources/Tables/UserTable.md')));
+        $this->assertTrue(File::exists(base_path($this->docsPath.'/Livewire/Resources/UserResource.md')));
+        $this->assertTrue(File::exists(base_path($this->docsPath.'/Livewire/Resources/Tables/UserTable.md')));
     }
 
     public function test_it_uses_configured_model(): void
@@ -218,7 +220,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
 
         // Capture the model
         $capturedModel = null;
-        
+
         // Mock the command
         $this->instance(
             GenerateAiDocumentationForFilamentFilesCommand::class,
@@ -228,6 +230,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->once()
                 ->withArgs(function ($prompt, $model) use (&$capturedModel) {
                     $capturedModel = $model;
+
                     return true;
                 })
                 ->andReturn('## Generated Documentation')
@@ -267,8 +270,8 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
     {
         // Create various file types
         $this->createFilamentFile('UserResource.php');
-        File::put(base_path($this->livewirePath . '/config.json'), '{"filament": true}');
-        File::put(base_path($this->livewirePath . '/styles.css'), '.filament { }');
+        File::put(base_path($this->livewirePath.'/config.json'), '{"filament": true}');
+        File::put(base_path($this->livewirePath.'/styles.css'), '.filament { }');
 
         // Mock the command
         $this->instance(
@@ -314,8 +317,8 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
             ->assertExitCode(0);
 
         // Verify directory structure was created
-        $this->assertTrue(File::exists(base_path($this->docsPath . '/Livewire/Resources/Admin/Users')));
-        $this->assertTrue(File::exists(base_path($this->docsPath . '/Livewire/Resources/Admin/Users/UserResource.md')));
+        $this->assertTrue(File::exists(base_path($this->docsPath.'/Livewire/Resources/Admin/Users')));
+        $this->assertTrue(File::exists(base_path($this->docsPath.'/Livewire/Resources/Admin/Users/UserResource.md')));
     }
 
     public function test_it_uses_correct_permissions_for_directories(): void
@@ -342,7 +345,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
 
         // Can't easily test actual permissions in all environments
         // Just verify the command completed successfully
-        $this->assertTrue(File::exists(base_path($this->docsPath . '/Livewire/UserResource.md')));
+        $this->assertTrue(File::exists(base_path($this->docsPath.'/Livewire/UserResource.md')));
     }
 
     /**
@@ -350,9 +353,9 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
      */
     protected function createFilamentFile(string $filename): void
     {
-        $path = base_path($this->livewirePath . '/' . $filename);
+        $path = base_path($this->livewirePath.'/'.$filename);
         File::ensureDirectoryExists(dirname($path));
-        
+
         $content = <<<'PHP'
 <?php
 
@@ -382,7 +385,7 @@ class UserResource extends Resource
     }
 }
 PHP;
-        
+
         File::put($path, $content);
     }
 
@@ -391,9 +394,9 @@ PHP;
      */
     protected function createNonFilamentFile(string $filename): void
     {
-        $path = base_path($this->livewirePath . '/' . $filename);
+        $path = base_path($this->livewirePath.'/'.$filename);
         File::ensureDirectoryExists(dirname($path));
-        
+
         $content = <<<'PHP'
 <?php
 
@@ -409,7 +412,7 @@ class RegularComponent extends Component
     }
 }
 PHP;
-        
+
         File::put($path, $content);
     }
 }

@@ -7,24 +7,24 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateModuleDocumentationJob;
 use Lumiio\CascadeDocs\Tests\TestCase;
-use Mockery;
 
 class UpdateModuleDocumentationJobSimpleTest extends TestCase
 {
     protected string $metadataPath;
+
     protected string $contentPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->metadataPath = 'docs/source_documents/modules/metadata';
         $this->contentPath = 'docs/source_documents/modules/content';
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path($this->metadataPath));
         File::ensureDirectoryExists(base_path($this->contentPath));
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.modules.metadata', 'docs/source_documents/modules/metadata/');
         Config::set('cascadedocs.paths.modules.content', 'docs/source_documents/modules/content/');
@@ -36,14 +36,14 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         if (File::exists(base_path('docs'))) {
             File::deleteDirectory(base_path('docs'));
         }
-        
+
         parent::tearDown();
     }
 
     public function test_job_basic_properties(): void
     {
         $job = new UpdateModuleDocumentationJob('test', 'sha123');
-        
+
         $this->assertEquals('test', $job->module_slug);
         $this->assertEquals('sha123', $job->to_sha);
         $this->assertEquals('gpt-4', $job->model);
@@ -54,17 +54,17 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
     public function test_job_custom_model(): void
     {
         $job = new UpdateModuleDocumentationJob('test', 'sha123', 'claude-3');
-        
+
         $this->assertEquals('claude-3', $job->model);
     }
 
     public function test_job_throws_when_module_not_exists(): void
     {
         $job = new UpdateModuleDocumentationJob('nonexistent', 'sha123');
-        
+
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Module not found: nonexistent');
-        
+
         $job->handle();
     }
 
@@ -74,16 +74,16 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         $this->createModuleMetadata('documented', [
             'module_name' => 'Documented Module',
             'files' => ['app/Services/Service1.php', 'app/Services/Service2.php'],
-            'undocumented_files' => []
+            'undocumented_files' => [],
         ]);
 
         $job = new UpdateModuleDocumentationJob('documented', 'sha123');
-        
+
         // Job should complete without errors
         $job->handle();
-        
+
         // Verify metadata wasn't updated (no last_sha)
-        $metadata = json_decode(File::get(base_path($this->metadataPath . '/documented.json')), true);
+        $metadata = json_decode(File::get(base_path($this->metadataPath.'/documented.json')), true);
         $this->assertArrayNotHasKey('last_sha', $metadata);
     }
 
@@ -100,7 +100,7 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         $this->createModuleMetadata('test', [
             'module_name' => 'Test Module',
             'files' => [],
-            'undocumented_files' => ['app/Services/TestService.php']
+            'undocumented_files' => ['app/Services/TestService.php'],
         ]);
 
         // We can't test the full job without mocking AI, but we can verify
@@ -118,7 +118,7 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
     public function test_job_constructs_with_queue_connection(): void
     {
         $job = new UpdateModuleDocumentationJob('test', 'sha123');
-        
+
         // The job should be queueable
         $this->assertContains('Illuminate\Bus\Queueable', class_uses($job));
         $this->assertContains('Illuminate\Queue\InteractsWithQueue', class_uses($job));
@@ -131,11 +131,11 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         $this->createModuleMetadata('existing', [
             'module_name' => 'Existing Module',
             'files' => [],
-            'undocumented_files' => ['app/Services/NewService.php']
+            'undocumented_files' => ['app/Services/NewService.php'],
         ]);
 
         // Create existing content file
-        $contentFile = base_path($this->contentPath . '/existing.md');
+        $contentFile = base_path($this->contentPath.'/existing.md');
         File::put($contentFile, "# Existing Module\n\n## Overview\n\nExisting content here.");
 
         // Create documentation for the undocumented file
@@ -147,7 +147,7 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         Config::set('cascadedocs.tiers.expansive', 'full');
 
         $job = new UpdateModuleDocumentationJob('existing', 'sha123');
-        
+
         try {
             $job->handle();
             $this->fail('Expected to throw exception at AI call');
@@ -163,7 +163,7 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         $this->createModuleMetadata('tiers', [
             'module_name' => 'Tiers Module',
             'files' => [],
-            'undocumented_files' => ['app/Services/TierService.php']
+            'undocumented_files' => ['app/Services/TierService.php'],
         ]);
 
         // Create documentation in medium tier only
@@ -175,7 +175,7 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         Config::set('cascadedocs.tiers.standard', 'medium');
 
         $job = new UpdateModuleDocumentationJob('tiers', 'sha123');
-        
+
         try {
             $job->handle();
         } catch (\Exception $e) {
@@ -191,7 +191,7 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         $this->createModuleMetadata('ratelimit', [
             'module_name' => 'Rate Limited Module',
             'files' => [],
-            'undocumented_files' => ['app/Services/RateLimitService.php']
+            'undocumented_files' => ['app/Services/RateLimitService.php'],
         ]);
 
         // Create documentation
@@ -203,7 +203,7 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
         Config::set('cascadedocs.tiers.expansive', 'full');
 
         $job = new UpdateModuleDocumentationJob('ratelimit', 'sha123');
-        
+
         // The job will fail with an exception
         try {
             $job->handle();
@@ -222,11 +222,11 @@ class UpdateModuleDocumentationJobSimpleTest extends TestCase
             'module_slug' => $slug,
             'module_name' => ucfirst($slug),
             'files' => [],
-            'undocumented_files' => []
+            'undocumented_files' => [],
         ], $data);
-        
+
         File::put(
-            base_path($this->metadataPath . '/' . $slug . '.json'),
+            base_path($this->metadataPath.'/'.$slug.'.json'),
             json_encode($metadata, JSON_PRETTY_PRINT)
         );
     }

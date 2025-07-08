@@ -11,7 +11,7 @@ class UpdateModuleDocumentationJobTest extends TestCase
     public function test_it_initializes_with_correct_configuration(): void
     {
         Config::set('cascadedocs.ai.default_model', 'gpt-4');
-        
+
         $job = new UpdateModuleDocumentationJob(
             'test-module',
             'abc123'

@@ -9,21 +9,23 @@ use Lumiio\CascadeDocs\Tests\TestCase;
 class ModuleStatusCommandTest extends TestCase
 {
     protected string $testPath;
+
     protected string $assignmentLogPath;
+
     protected string $docsPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->testPath = 'tests/fixtures/module-status';
         $this->assignmentLogPath = 'docs/module-assignment-log.json';
         $this->docsPath = 'docs/source_documents/modules';
-        
+
         // Create test directories
         File::ensureDirectoryExists(base_path($this->docsPath));
         File::ensureDirectoryExists(base_path('docs'));
-        
+
         // Configure paths
         Config::set('cascadedocs.paths.tracking.module_assignment', $this->assignmentLogPath);
     }
@@ -34,11 +36,11 @@ class ModuleStatusCommandTest extends TestCase
         if (File::exists(base_path($this->testPath))) {
             File::deleteDirectory(base_path($this->testPath));
         }
-        
+
         if (File::exists(base_path('docs'))) {
             File::deleteDirectory(base_path('docs'));
         }
-        
+
         parent::tearDown();
     }
 
@@ -55,13 +57,13 @@ class ModuleStatusCommandTest extends TestCase
 
     public function test_command_has_correct_name(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand;
         $this->assertEquals('documentation:module-status', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
     {
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand;
         $this->assertEquals('Display current module assignment status and statistics', $command->getDescription());
     }
 
@@ -70,10 +72,10 @@ class ModuleStatusCommandTest extends TestCase
         $this->createAssignmentLog([
             'assigned_files' => [
                 'auth' => ['app/Services/AuthService.php', 'app/Models/User.php'],
-                'api' => ['app/Http/Controllers/ApiController.php']
+                'api' => ['app/Http/Controllers/ApiController.php'],
             ],
             'unassigned_files' => ['app/Helpers/StringHelper.php'],
-            'last_analysis' => '2024-01-01T00:00:00+00:00'
+            'last_analysis' => '2024-01-01T00:00:00+00:00',
         ]);
 
         $this->artisan('documentation:module-status')
@@ -89,7 +91,7 @@ class ModuleStatusCommandTest extends TestCase
                 ['Module', 'Files', 'Percentage'],
                 [
                     ['auth', 2, '50.0%'],
-                    ['api', 1, '25.0%']
+                    ['api', 1, '25.0%'],
                 ]
             )
             ->expectsOutput('Unassigned Files by Directory:')
@@ -105,9 +107,9 @@ class ModuleStatusCommandTest extends TestCase
         $this->createAssignmentLog([
             'assigned_files' => [
                 'auth' => ['app/Services/AuthService.php'],
-                'api' => ['app/Http/Controllers/ApiController.php']
+                'api' => ['app/Http/Controllers/ApiController.php'],
             ],
-            'unassigned_files' => []
+            'unassigned_files' => [],
         ]);
 
         $this->artisan('documentation:module-status', ['--summary' => true])
@@ -126,13 +128,13 @@ class ModuleStatusCommandTest extends TestCase
             'potential_modules' => [
                 [
                     'suggested_name' => 'reporting',
-                    'file_count' => 5
+                    'file_count' => 5,
                 ],
                 [
                     'suggested_name' => 'notifications',
-                    'file_count' => 3
-                ]
-            ]
+                    'file_count' => 3,
+                ],
+            ],
         ]);
 
         $this->artisan('documentation:module-status')
@@ -164,8 +166,8 @@ class ModuleStatusCommandTest extends TestCase
             'unassigned_files' => [
                 'app/Services/PaymentService.php',
                 'app/Services/NotificationService.php',
-                'app/Models/Payment.php'
-            ]
+                'app/Models/Payment.php',
+            ],
         ]);
 
         $this->artisan('documentation:module-status', ['--unassigned' => true])
@@ -184,7 +186,7 @@ class ModuleStatusCommandTest extends TestCase
     {
         $this->createAssignmentLog([
             'assigned_files' => ['auth' => ['app/Services/AuthService.php']],
-            'unassigned_files' => []
+            'unassigned_files' => [],
         ]);
 
         $this->artisan('documentation:module-status', ['--unassigned' => true])
@@ -202,15 +204,15 @@ class ModuleStatusCommandTest extends TestCase
                     'suggested_name' => 'payment-processing',
                     'file_count' => 8,
                     'confidence' => 0.85,
-                    'reason' => 'Files share payment-related functionality'
+                    'reason' => 'Files share payment-related functionality',
                 ],
                 [
                     'suggested_name' => 'email-notifications',
                     'file_count' => 4,
                     'confidence' => 0.72,
-                    'reason' => 'Files handle email sending and templates'
-                ]
-            ]
+                    'reason' => 'Files handle email sending and templates',
+                ],
+            ],
         ]);
 
         $this->artisan('documentation:module-status', ['--suggestions' => true])
@@ -234,7 +236,7 @@ class ModuleStatusCommandTest extends TestCase
         $this->createAssignmentLog([
             'assigned_files' => [],
             'unassigned_files' => [],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ]);
 
         $this->artisan('documentation:module-status', ['--suggestions' => true])
@@ -246,7 +248,7 @@ class ModuleStatusCommandTest extends TestCase
     {
         $this->createAssignmentLog([
             'assigned_files' => [],
-            'unassigned_files' => []
+            'unassigned_files' => [],
         ]);
 
         $this->artisan('documentation:module-status')
@@ -272,11 +274,11 @@ class ModuleStatusCommandTest extends TestCase
     public function test_percentage_calculation_handles_zero_total(): void
     {
         // This tests the edge case where total files is 0
-        $command = new \Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand();
+        $command = new \Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand;
         $reflection = new \ReflectionClass($command);
         $method = $reflection->getMethod('percentage');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($command, 0, 0);
         $this->assertEquals('0', $result);
     }
@@ -292,9 +294,9 @@ class ModuleStatusCommandTest extends TestCase
             'unassigned_files' => [],
             'do_not_document' => [],
             'potential_modules' => [],
-            'module_suggestions' => []
+            'module_suggestions' => [],
         ], $data);
-        
+
         File::put(base_path($this->assignmentLogPath), json_encode($log, JSON_PRETTY_PRINT));
     }
 }
