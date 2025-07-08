@@ -165,7 +165,7 @@ EOT;
         $moduleSummaries = '';
         foreach ($modules as $module) {
             $moduleSummaries .= "\n### {$module['name']} Module ({$module['file_count']} files)\n";
-            $moduleSummaries .= $module['summary'] . "\n";
+            $moduleSummaries .= $module['summary']."\n";
         }
 
         $prompt = <<<EOT

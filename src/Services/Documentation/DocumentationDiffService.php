@@ -164,7 +164,7 @@ class DocumentationDiffService
 
         // Ensure the directory exists
         $directory = dirname($log_path);
-        if (!File::exists($directory)) {
+        if (! File::exists($directory)) {
             File::makeDirectory($directory, 0755, true);
         }
 
