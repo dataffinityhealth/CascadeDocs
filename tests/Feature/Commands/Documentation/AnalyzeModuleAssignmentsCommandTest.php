@@ -34,13 +34,13 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('documentation:analyze-modules --help')
+        $this->artisan('cascadedocs:analyze-modules --help')
             ->assertExitCode(0);
     }
 
     public function test_it_warns_when_no_analysis_exists(): void
     {
-        $this->artisan('documentation:analyze-modules')
+        $this->artisan('cascadedocs:analyze-modules')
             ->expectsOutput('No analysis found. Run with --update to generate analysis.')
             ->assertExitCode(1);
     }
@@ -64,7 +64,7 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:analyze-modules')
+        $this->artisan('cascadedocs:analyze-modules')
             ->expectsOutput('Module Assignment Summary')
             ->expectsOutput('========================')
             ->assertExitCode(0);
@@ -88,7 +88,7 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:analyze-modules --report')
+        $this->artisan('cascadedocs:analyze-modules --report')
             ->expectsOutput('Files by Module')
             ->expectsOutput('===============')
             ->expectsOutput('Unassigned Files')
@@ -124,7 +124,7 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:analyze-modules --suggest')
+        $this->artisan('cascadedocs:analyze-modules --suggest')
             ->expectsOutput('Module Creation Suggestions')
             ->expectsOutput('===========================')
             ->expectsOutput('1. Suggested module: payment-processing')
@@ -149,7 +149,7 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:analyze-modules --suggest')
+        $this->artisan('cascadedocs:analyze-modules --suggest')
             ->expectsOutput('No module suggestions available.')
             ->assertExitCode(0);
     }
@@ -170,7 +170,7 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:analyze-modules')
+        $this->artisan('cascadedocs:analyze-modules')
             ->expectsOutput('Found 2 files without module assignments.')
             ->expectsOutput('Run with --report to see details or --suggest to see module suggestions.')
             ->assertExitCode(0);
@@ -198,7 +198,7 @@ class AnalyzeModuleAssignmentsCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:analyze-modules')
+        $this->artisan('cascadedocs:analyze-modules')
             ->expectsTable(
                 ['Metric', 'Count'],
                 [

@@ -62,7 +62,7 @@ class UpdateChangedDocumentationCommand extends Command
         $this->newLine();
         $this->info('Step 2: Updating file documentation...');
 
-        $this->call('update:documentation', [
+        $this->call('cascadedocs:update-documentation', [
             '--from-sha' => $fromSha,
             '--to-sha' => $toSha,
             '--model' => $model,
@@ -73,13 +73,13 @@ class UpdateChangedDocumentationCommand extends Command
         $this->info('Step 3: Updating module documentation...');
 
         // First, assign any new files to modules
-        $this->call('documentation:assign-files-to-modules', [
+        $this->call('cascadedocs:assign-files-to-modules', [
             '--model' => $model,
             '--force' => true,
         ]);
 
         // Then update module documentation
-        $this->call('documentation:update-all-modules', [
+        $this->call('cascadedocs:update-all-modules', [
             '--model' => $model,
         ]);
 
@@ -104,7 +104,7 @@ class UpdateChangedDocumentationCommand extends Command
         $this->info('Step 5: Documentation Update Summary');
         $this->info('='.str_repeat('=', 40));
 
-        $this->call('documentation:module-status');
+        $this->call('cascadedocs:module-status');
 
         // Step 6: Optionally commit changes
         if ($this->option('auto-commit')) {

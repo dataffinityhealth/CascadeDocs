@@ -53,13 +53,13 @@ class SyncModuleAssignmentsCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('documentation:sync-module-assignments --help')
+        $this->artisan('cascadedocs:sync-module-assignments --help')
             ->assertExitCode(0);
     }
 
     public function test_it_warns_when_no_modules_found(): void
     {
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->expectsOutput('Syncing module assignments from module metadata and documentation files...')
             ->expectsOutput('No module assignments found.')
             ->assertExitCode(1);
@@ -80,7 +80,7 @@ class SyncModuleAssignmentsCommandTest extends TestCase
 
         File::put(base_path($this->metadataPath.'/auth.json'), json_encode($metadata));
 
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->expectsOutput('Syncing module assignments from module metadata and documentation files...')
             ->expectsOutputToContain('Module File References Found')
             ->expectsOutputToContain('auth: 3 files')
@@ -110,7 +110,7 @@ MD;
 
         File::put(base_path($this->contentPath.'/auth.md'), $markdown);
 
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->expectsOutputToContain('auth: 5 files')
             ->run();
     }
@@ -141,7 +141,7 @@ MD;
 
         File::put(base_path($this->contentPath.'/users.md'), $markdown);
 
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->expectsOutputToContain('users: 4 files') // Should merge to 4 unique files
             ->run();
     }
@@ -157,7 +157,7 @@ MD;
 
         File::put(base_path($this->metadataPath.'/api.json'), json_encode($metadata));
 
-        $this->artisan('documentation:sync-module-assignments', [
+        $this->artisan('cascadedocs:sync-module-assignments', [
             '--dry-run' => true,
         ])
             ->expectsOutputToContain('api: 1 files')
@@ -174,7 +174,7 @@ MD;
         $markdown = '# Test Module\n\n- `app/Services/TestService.php` - Test service';
         File::put(base_path($this->contentPath.'/test.md'), $markdown);
 
-        $this->artisan('documentation:sync-module-assignments', [
+        $this->artisan('cascadedocs:sync-module-assignments', [
             '--detailed' => true,
         ])
             ->expectsOutputToContain('Parsing module documentation: test')
@@ -196,7 +196,7 @@ MD;
         ];
         File::put(base_path($this->metadataPath.'/valid.json'), json_encode($metadata));
 
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->expectsOutputToContain('valid: 1 files')
             ->expectsOutputToContain('Total modules: 1')
             ->run();
@@ -210,7 +210,7 @@ MD;
         // Create valid markdown file
         File::put(base_path($this->contentPath.'/valid.md'), '`app/Models/Valid.php`');
 
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->expectsOutputToContain('valid: 1 files')
             ->expectsOutputToContain('Total modules: 1')
             ->run();
@@ -231,7 +231,7 @@ MD;
 
         File::put(base_path($this->contentPath.'/test.md'), $markdown);
 
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->expectsOutputToContain('test: 1 files') // Should only find the valid file
             ->run();
     }
@@ -258,7 +258,7 @@ MD;
         ];
         File::put(base_path($this->metadataPath.'/test.json'), json_encode($metadata));
 
-        $this->artisan('documentation:sync-module-assignments')
+        $this->artisan('cascadedocs:sync-module-assignments')
             ->run();
 
         // Verify do_not_document files are preserved
@@ -284,7 +284,7 @@ MD;
             File::put(base_path($this->metadataPath."/{$slug}.json"), json_encode($metadata));
         }
 
-        $output = $this->artisan('documentation:sync-module-assignments');
+        $output = $this->artisan('cascadedocs:sync-module-assignments');
 
         // Just verify it runs without errors and finds multiple modules
         $output->expectsOutputToContain('Total modules: 3')
@@ -300,7 +300,7 @@ MD;
     public function test_command_has_correct_name(): void
     {
         $command = new \Lumiio\CascadeDocs\Commands\Documentation\SyncModuleAssignmentsCommand;
-        $this->assertEquals('documentation:sync-module-assignments', $command->getName());
+        $this->assertEquals('cascadedocs:sync-module-assignments', $command->getName());
     }
 
     public function test_command_has_correct_description(): void

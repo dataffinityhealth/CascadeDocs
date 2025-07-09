@@ -11,7 +11,7 @@ use ReflectionClass;
 
 class SyncModuleAssignmentsCommand extends Command
 {
-    protected $signature = 'documentation:sync-module-assignments 
+    protected $signature = 'cascadedocs:sync-module-assignments 
         {--dry-run : Show what would be updated without making changes}
         {--detailed : Show detailed parsing information}';
 
@@ -46,7 +46,7 @@ class SyncModuleAssignmentsCommand extends Command
         $this->update_assignment_log($module_assignments);
 
         $this->info("\nModule assignments have been synced successfully!");
-        $this->info('Run php artisan documentation:analyze-modules --report to see the updated assignments.');
+        $this->info('Run php artisan cascadedocs:analyze-modules --report to see the updated assignments.');
 
         return 0;
     }

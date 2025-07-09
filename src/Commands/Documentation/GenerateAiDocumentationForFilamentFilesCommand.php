@@ -12,7 +12,7 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
 {
     use ProviderResponseTrait;
 
-    protected $signature = 'generate:ai-documentation-for-filament-files';
+    protected $signature = 'cascadedocs:generate-ai-documentation-for-filament-files';
 
     protected $description = 'Generate AI documentation for Filament files in the Livewire directory';
 

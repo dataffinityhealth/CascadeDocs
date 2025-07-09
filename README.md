@@ -154,9 +154,9 @@ php artisan cascadedocs:generate-class-docs --model=gpt-4
 php artisan cascadedocs:generate-module-docs
 
 # Or run individual steps:
-php artisan documentation:analyze-modules          # AI analyzes optimal module structure
-php artisan documentation:assign-files-to-modules  # Assigns files to modules
-php artisan documentation:update-all-modules       # Generates module documentation
+php artisan cascadedocs:analyze-modules          # AI analyzes optimal module structure
+php artisan cascadedocs:assign-files-to-modules  # Assigns files to modules
+php artisan cascadedocs:update-all-modules       # Generates module documentation
 php artisan cascadedocs:generate-module-index      # Creates searchable index
 ```
 
@@ -177,10 +177,10 @@ php artisan cascadedocs:update-changed --auto-commit
 
 ```bash
 # View module status
-php artisan documentation:module-status
+php artisan cascadedocs:module-status
 
 # Create a new module manually
-php artisan documentation:create-module "Payment Processing"
+php artisan cascadedocs:create-module "Payment Processing"
 
 # Force fresh module analysis (ignores cache)
 php artisan cascadedocs:generate-module-docs --fresh

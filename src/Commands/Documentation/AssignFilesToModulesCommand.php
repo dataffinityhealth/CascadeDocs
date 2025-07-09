@@ -14,7 +14,7 @@ class AssignFilesToModulesCommand extends Command
 {
     use ProviderResponseTrait;
 
-    protected $signature = 'documentation:assign-files-to-modules
+    protected $signature = 'cascadedocs:assign-files-to-modules
         {--dry-run : Preview changes without applying them}
         {--auto-create : Automatically create suggested new modules}
         {--confidence= : Minimum confidence threshold for auto-assignment}
@@ -277,7 +277,7 @@ class AssignFilesToModulesCommand extends Command
 
         // Sync module assignments to ensure consistency
         $this->info('Syncing module assignments...');
-        $this->call('documentation:sync-module-assignments', ['--quiet' => true]);
+        $this->call('cascadedocs:sync-module-assignments', ['--quiet' => true]);
 
         // Update the analysis to reflect the changes we just made
         // This is necessary because we've modified the module structure

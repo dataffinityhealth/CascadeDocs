@@ -50,13 +50,13 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('generate:ai-documentation --help')
+        $this->artisan('cascadedocs:generate-ai-documentation --help')
             ->assertExitCode(0);
     }
 
     public function test_it_validates_tier_option(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--tier' => 'invalid-tier',
         ])
             ->expectsOutput('Invalid tier option. Must be one of: micro, standard, expansive, all')
@@ -65,7 +65,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_uses_default_paths_when_none_provided(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--tier' => 'micro',
         ])
             ->expectsOutput('Starting multi-tier documentation generation...')
@@ -75,7 +75,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_uses_default_paths_with_flag(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--default-paths' => true,
             '--tier' => 'standard',
         ])
@@ -85,7 +85,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_scans_custom_paths(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'micro',
         ])
@@ -96,7 +96,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_warns_about_missing_paths(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => ['nonexistent/path'],
             '--tier' => 'micro',
         ])
@@ -106,7 +106,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_dispatches_jobs_for_found_files(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'micro',
         ])
@@ -117,7 +117,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_uses_custom_model(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'standard',
             '--model' => 'claude-3',
@@ -131,7 +131,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_uses_default_model_when_not_specified(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'expansive',
         ])
@@ -144,7 +144,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_processes_all_tiers(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'all',
         ])
@@ -157,7 +157,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_creates_documentation_directories(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'micro',
         ])
@@ -176,7 +176,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
         File::put(base_path($this->testPath.'/app/script.ts'), 'const test: string = "test";');
         File::put(base_path($this->testPath.'/app/component.jsx'), 'const Component = () => <div></div>;');
 
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'micro',
         ])
@@ -194,7 +194,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
         File::ensureDirectoryExists(dirname($docPath));
         File::put($docPath, 'Existing documentation');
 
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'micro',
         ])
@@ -207,7 +207,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
 
     public function test_it_shows_processing_summary(): void
     {
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/app'],
             '--tier' => 'standard',
         ])
@@ -221,7 +221,7 @@ class GenerateAiDocumentationForAllFilesCommandTest extends TestCase
     {
         File::ensureDirectoryExists(base_path($this->testPath.'/empty'));
 
-        $this->artisan('generate:ai-documentation', [
+        $this->artisan('cascadedocs:generate-ai-documentation', [
             '--paths' => [$this->testPath.'/empty'],
             '--tier' => 'micro',
         ])

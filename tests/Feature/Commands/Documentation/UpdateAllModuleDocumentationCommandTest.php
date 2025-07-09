@@ -40,7 +40,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('documentation:update-all-modules --help')
+        $this->artisan('cascadedocs:update-all-modules --help')
             ->assertExitCode(0);
     }
 
@@ -52,7 +52,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
     public function test_command_has_correct_name(): void
     {
         $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateAllModuleDocumentationCommand;
-        $this->assertEquals('documentation:update-all-modules', $command->getName());
+        $this->assertEquals('cascadedocs:update-all-modules', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
@@ -63,7 +63,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
 
     public function test_it_reports_no_modules_when_metadata_directory_empty(): void
     {
-        $this->artisan('documentation:update-all-modules')
+        $this->artisan('cascadedocs:update-all-modules')
             ->expectsOutput('Starting module documentation update process...')
             ->expectsOutput('Found 0 total modules')
             ->expectsOutput('No modules have undocumented files. All documentation is up to date!')
@@ -89,7 +89,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => [],
         ]);
 
-        $this->artisan('documentation:update-all-modules', ['--force' => true])
+        $this->artisan('cascadedocs:update-all-modules', ['--force' => true])
             ->expectsOutput('Found 3 total modules')
             ->expectsOutput('Found 2 modules with undocumented files:')
             ->expectsOutputToContain('Dispatching module documentation update jobs...')
@@ -110,7 +110,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => ['app/Services/AuthService.php'],
         ]);
 
-        $this->artisan('documentation:update-all-modules', [
+        $this->artisan('cascadedocs:update-all-modules', [
             '--module' => 'auth',
         ])
             ->expectsOutput('Module: Authentication')
@@ -123,7 +123,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
 
     public function test_it_reports_error_for_nonexistent_module(): void
     {
-        $this->artisan('documentation:update-all-modules', [
+        $this->artisan('cascadedocs:update-all-modules', [
             '--module' => 'nonexistent',
         ])
             ->expectsOutput('Module not found: nonexistent')
@@ -137,7 +137,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => [],
         ]);
 
-        $this->artisan('documentation:update-all-modules', [
+        $this->artisan('cascadedocs:update-all-modules', [
             '--module' => 'complete',
         ])
             ->expectsOutput('Module \'complete\' has no undocumented files.')
@@ -153,7 +153,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => ['app/Services/AuthService.php', 'app/Models/User.php'],
         ]);
 
-        $this->artisan('documentation:update-all-modules', ['--dry-run' => true])
+        $this->artisan('cascadedocs:update-all-modules', ['--dry-run' => true])
             ->expectsOutput('Found 1 modules with undocumented files:')
             ->expectsOutputToContain('Dry run mode - no changes will be made.')
             ->assertExitCode(0);
@@ -169,7 +169,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => ['app/Services/AuthService.php', 'app/Models/User.php'],
         ]);
 
-        $this->artisan('documentation:update-all-modules', [
+        $this->artisan('cascadedocs:update-all-modules', [
             '--module' => 'auth',
             '--dry-run' => true,
         ])
@@ -191,7 +191,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => ['app/Services/AuthService.php'],
         ]);
 
-        $this->artisan('documentation:update-all-modules')
+        $this->artisan('cascadedocs:update-all-modules')
             ->expectsConfirmation('Do you want to update documentation for these modules?', 'no')
             ->expectsOutput('Update cancelled.')
             ->assertExitCode(0);
@@ -217,7 +217,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => ['app/Models/User.php'],
         ]);
 
-        $this->artisan('documentation:update-all-modules', [
+        $this->artisan('cascadedocs:update-all-modules', [
             '--limit' => 2,
             '--force' => true,
         ])
@@ -238,7 +238,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => ['app/Services/AuthService.php'],
         ]);
 
-        $this->artisan('documentation:update-all-modules', [
+        $this->artisan('cascadedocs:update-all-modules', [
             '--module' => 'auth',
             '--model' => 'claude-3',
         ])
@@ -260,7 +260,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
 
         File::put(base_path($this->metadataPath.'/legacy.json'), json_encode($metadata));
 
-        $this->artisan('documentation:update-all-modules')
+        $this->artisan('cascadedocs:update-all-modules')
             ->expectsOutput('Found 1 total modules')
             ->expectsOutput('No modules have undocumented files. All documentation is up to date!')
             ->assertExitCode(0);
@@ -273,7 +273,7 @@ class UpdateAllModuleDocumentationCommandTest extends TestCase
             'undocumented_files' => ['app/Services/AuthService.php'],
         ]);
 
-        $this->artisan('documentation:update-all-modules', ['--force' => true])
+        $this->artisan('cascadedocs:update-all-modules', ['--force' => true])
             ->expectsOutput('Check your queue worker for processing status.')
             ->expectsOutput('Run: php artisan queue:work --queue=module_updates')
             ->assertExitCode(0);

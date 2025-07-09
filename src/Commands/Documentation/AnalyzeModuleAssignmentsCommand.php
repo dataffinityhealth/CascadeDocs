@@ -7,7 +7,7 @@ use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentAIService;
 
 class AnalyzeModuleAssignmentsCommand extends Command
 {
-    protected $signature = 'documentation:analyze-modules 
+    protected $signature = 'cascadedocs:analyze-modules 
         {--report : Show detailed report}
         {--suggest : Show module suggestions}
         {--update : Update the analysis log}';
@@ -150,8 +150,8 @@ class AnalyzeModuleAssignmentsCommand extends Command
 
         $this->newLine();
         $this->info('To assign additional files to modules:');
-        $this->line('1. Run php artisan documentation:assign-files-to-modules');
+        $this->line('1. Run php artisan cascadedocs:assign-files-to-modules');
         $this->line('2. Or manually edit the module metadata files');
-        $this->line('3. Run php artisan documentation:update-all-modules to regenerate documentation');
+        $this->line('3. Run php artisan cascadedocs:update-all-modules to regenerate documentation');
     }
 }

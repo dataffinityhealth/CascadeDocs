@@ -62,7 +62,7 @@ class AssignFilesToModulesCommandTest extends TestCase
     public function test_command_has_correct_signature(): void
     {
         $command = new AssignFilesToModulesCommand;
-        $this->assertEquals('documentation:assign-files-to-modules', $command->getName());
+        $this->assertEquals('cascadedocs:assign-files-to-modules', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
@@ -82,7 +82,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             'unassigned_files' => [],
         ]));
 
-        $this->artisan('documentation:assign-files-to-modules')
+        $this->artisan('cascadedocs:assign-files-to-modules')
             ->expectsOutput('Starting file-to-module assignment process...')
             ->expectsOutput('Loading current module assignments...')
             ->expectsOutput('✓ No unassigned files found! All files are assigned to modules.')
@@ -98,7 +98,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             'unassigned_files' => ['app/Services/UnassignedService.php'],
         ]));
 
-        $this->artisan('documentation:assign-files-to-modules', ['--dry-run' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--dry-run' => true])
             ->expectsOutput('Starting file-to-module assignment process...')
             ->expectsOutput('Loading current module assignments...')
             ->expectsOutput('Found 1 unassigned files.')
@@ -120,7 +120,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             'unassigned_files' => ['app/Services/UnassignedService.php'],
         ]));
 
-        $this->artisan('documentation:assign-files-to-modules', ['--dry-run' => true, '--output-prompt' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--dry-run' => true, '--output-prompt' => true])
             ->expectsOutput('Prompt saved to: '.base_path($this->outputPromptPath))
             ->assertExitCode(0);
 
@@ -141,7 +141,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             'unassigned_files' => $unassignedFiles,
         ]));
 
-        $this->artisan('documentation:assign-files-to-modules', ['--dry-run' => true, '--limit' => 3])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--dry-run' => true, '--limit' => 3])
             ->expectsOutput('Found 10 unassigned files.')
             ->expectsOutput('Processing only 3 files as requested.')
             ->assertExitCode(0);
@@ -193,7 +193,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             ], 200),
         ]);
 
-        $this->artisan('documentation:assign-files-to-modules', ['--force' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--force' => true])
             ->expectsOutputToContain('Calling AI service for recommendations...')
             ->assertExitCode(0);
     }
@@ -232,7 +232,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             ], 200),
         ]);
 
-        $this->artisan('documentation:assign-files-to-modules', ['--force' => true, '--auto-create' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--force' => true, '--auto-create' => true])
             ->expectsOutputToContain('Calling AI service for recommendations...')
             ->assertExitCode(0);
     }
@@ -271,7 +271,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             ], 200),
         ]);
 
-        $this->artisan('documentation:assign-files-to-modules', ['--force' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--force' => true])
             ->expectsOutputToContain('Calling AI service for recommendations...')
             ->assertExitCode(0);
     }
@@ -316,7 +316,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             ], 200),
         ]);
 
-        $this->artisan('documentation:assign-files-to-modules', ['--confidence' => 0.8, '--force' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--confidence' => 0.8, '--force' => true])
             ->expectsOutput('Calling AI service for recommendations...')
             ->expectsOutput('Processing AI recommendations...')
             ->expectsOutputToContain('Low confidence assignments (require manual review)')
@@ -377,7 +377,7 @@ class AssignFilesToModulesCommandTest extends TestCase
         ]);
 
         // The command will catch the exception and use fallback recommendations
-        $this->artisan('documentation:assign-files-to-modules', ['--force' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--force' => true])
             ->expectsOutputToContain('Failed to get AI recommendations')
             ->expectsOutput('Using fallback recommendations for demonstration...')
             ->expectsOutputToContain('=== AI Recommendations Summary ===')  // Output will display recommendations summary
@@ -425,7 +425,7 @@ class AssignFilesToModulesCommandTest extends TestCase
         ]);
 
         // Without --interactive, it should not prompt for low confidence assignments
-        $this->artisan('documentation:assign-files-to-modules', ['--force' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--force' => true])
             ->expectsOutput('Calling AI service for recommendations...')
             ->expectsOutput('Processing AI recommendations...')
             ->expectsOutputToContain('Low confidence assignments (require manual review)')
@@ -455,7 +455,7 @@ class AssignFilesToModulesCommandTest extends TestCase
             ], 200),
         ]);
 
-        $this->artisan('documentation:assign-files-to-modules', ['--force' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--force' => true])
             ->expectsOutput('Calling AI service for recommendations...')
             ->expectsOutputToContain('Failed to get AI recommendations')
             ->expectsOutput('Using fallback recommendations for demonstration...')

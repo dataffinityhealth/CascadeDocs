@@ -8,7 +8,7 @@ use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
 
 class UpdateAllModuleDocumentationCommand extends Command
 {
-    protected $signature = 'documentation:update-all-modules 
+    protected $signature = 'cascadedocs:update-all-modules 
                             {--module= : Update a specific module}
                             {--model= : The AI model to use for generation}
                             {--dry-run : Show what would be updated without making changes}

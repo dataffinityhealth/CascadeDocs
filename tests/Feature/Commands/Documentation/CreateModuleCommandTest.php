@@ -47,7 +47,7 @@ class CreateModuleCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('documentation:create-module --help')
+        $this->artisan('cascadedocs:create-module --help')
             ->assertExitCode(0);
     }
 
@@ -56,12 +56,12 @@ class CreateModuleCommandTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Not enough arguments (missing: "name")');
 
-        $this->artisan('documentation:create-module');
+        $this->artisan('cascadedocs:create-module');
     }
 
     public function test_it_creates_basic_module_with_all_options(): void
     {
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'test-module',
             '--files' => ['app/Models/Test.php'],
             '--title' => 'Test Module',
@@ -76,7 +76,7 @@ class CreateModuleCommandTest extends TestCase
 
     public function test_it_formats_module_name_correctly(): void
     {
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'User Management System',
             '--files' => ['app/Models/User.php'],
             '--description' => 'User management functionality',
@@ -91,7 +91,7 @@ class CreateModuleCommandTest extends TestCase
         $modulePath = base_path('docs/source_documents/modules/existing-module.md');
         File::put($modulePath, 'Existing content');
 
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'existing-module',
             '--files' => ['app/Models/Test.php'],
             '--description' => 'Should not overwrite',
@@ -105,7 +105,7 @@ class CreateModuleCommandTest extends TestCase
 
     public function test_it_handles_empty_module_creation(): void
     {
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'empty-module',
             '--title' => 'Empty Module',
             '--description' => 'An empty module',
@@ -118,7 +118,7 @@ class CreateModuleCommandTest extends TestCase
 
     public function test_it_cancels_empty_module_creation(): void
     {
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'cancelled-module',
             '--title' => 'Cancelled Module',
             '--description' => 'A cancelled module',
@@ -130,7 +130,7 @@ class CreateModuleCommandTest extends TestCase
 
     public function test_it_prompts_for_description_when_not_provided(): void
     {
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'prompt-module',
             '--files' => ['app/Models/Test.php'],
             '--title' => 'Prompt Module',
@@ -157,7 +157,7 @@ class CreateModuleCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'user-auth',
             '--from-suggestion' => true,
             '--title' => 'User Authentication',
@@ -180,7 +180,7 @@ class CreateModuleCommandTest extends TestCase
             json_encode($analysisLog)
         );
 
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'nonexistent-suggestion',
             '--from-suggestion' => true,
             '--title' => 'Nonexistent Module',
@@ -194,7 +194,7 @@ class CreateModuleCommandTest extends TestCase
 
     public function test_it_formats_title_from_slug(): void
     {
-        $this->artisan('documentation:create-module', [
+        $this->artisan('cascadedocs:create-module', [
             'name' => 'user-profile-management',
             '--files' => ['app/Models/UserProfile.php'],
             '--description' => 'User profile management functionality',

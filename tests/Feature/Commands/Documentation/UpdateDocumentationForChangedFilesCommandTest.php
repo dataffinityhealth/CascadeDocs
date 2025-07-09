@@ -52,7 +52,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('update:documentation --help')
+        $this->artisan('cascadedocs:update-documentation --help')
             ->assertExitCode(0);
     }
 
@@ -64,7 +64,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
     public function test_command_has_correct_name(): void
     {
         $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationForChangedFilesCommand;
-        $this->assertEquals('update:documentation', $command->getName());
+        $this->assertEquals('cascadedocs:update-documentation', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
@@ -83,7 +83,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation')
+        $this->artisan('cascadedocs:update-documentation')
             ->expectsOutput('Starting documentation update process...')
             ->expectsOutput('No previous update SHA found in documentation-update-log.json')
             ->expectsOutput('The log file should be initialized with a last_update_sha.')
@@ -106,7 +106,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation')
+        $this->artisan('cascadedocs:update-documentation')
             ->expectsOutput('Documentation is already up to date with commit: abc123')
             ->assertExitCode(0);
     }
@@ -128,7 +128,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation')
+        $this->artisan('cascadedocs:update-documentation')
             ->expectsOutput('Checking for changes from abc123 to def456')
             ->expectsOutput('No documentable files have changed.')
             ->assertExitCode(0);
@@ -165,7 +165,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'unassigned_files' => [],
         ]));
 
-        $this->artisan('update:documentation')
+        $this->artisan('cascadedocs:update-documentation')
             ->expectsOutput('Found 3 changed files:')
             ->expectsTable(['Type', 'Count'], [['php', 2], ['vue', 1]])
             ->expectsOutputToContain('Dispatching documentation update jobs...')
@@ -200,7 +200,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation', ['--dry-run' => true])
+        $this->artisan('cascadedocs:update-documentation', ['--dry-run' => true])
             ->expectsOutput('Found 2 changed files:')
             ->expectsOutput('Dry run mode - no changes will be made.')
             ->expectsOutputToContain('Files that would be updated:')
@@ -233,7 +233,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation', ['--since' => 'custom123'])
+        $this->artisan('cascadedocs:update-documentation', ['--since' => 'custom123'])
             ->expectsOutput('Checking for changes from custom123 to def456')
             ->expectsOutput('No documentable files have changed.')
             ->assertExitCode(0);
@@ -257,7 +257,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation', ['--model' => 'claude-3'])
+        $this->artisan('cascadedocs:update-documentation', ['--model' => 'claude-3'])
             ->assertExitCode(0);
 
         Queue::assertPushed(function (UpdateDocumentationForFileJob $job) {
@@ -288,7 +288,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation')
+        $this->artisan('cascadedocs:update-documentation')
             ->expectsOutput('Found 2 changed files:')
             ->assertExitCode(0);
 
@@ -331,7 +331,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'unassigned_files' => [],
         ]));
 
-        $this->artisan('update:documentation')
+        $this->artisan('cascadedocs:update-documentation')
             ->assertExitCode(0);
 
         // Verify file job was dispatched
@@ -363,7 +363,7 @@ class UpdateDocumentationForChangedFilesCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('update:documentation')
+        $this->artisan('cascadedocs:update-documentation')
             ->expectsOutput('Found 2 changed files:')
             ->assertExitCode(0);
 

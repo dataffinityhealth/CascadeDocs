@@ -55,7 +55,7 @@ describe('Avoid Duplicate Analysis', function () {
         File::put(base_path('docs/source_documents/short/app/Unassigned.php.md'), '# Unassigned file doc');
 
         // Run command - should use existing analysis
-        $this->artisan('documentation:assign-files-to-modules', ['--dry-run' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--dry-run' => true])
             ->expectsOutput('Loading current module assignments...')
             ->doesntExpectOutput('No existing analysis found. Running initial analysis...')
             ->expectsOutput('Found 1 unassigned files.')
@@ -85,7 +85,7 @@ describe('Avoid Duplicate Analysis', function () {
         ]);
 
         // Run command - should detect no log and run analysis
-        $this->artisan('documentation:assign-files-to-modules', ['--dry-run' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--dry-run' => true])
             ->expectsOutput('Loading current module assignments...')
             ->expectsOutput('No existing analysis found. Running initial analysis...')
             ->assertExitCode(0);
@@ -123,7 +123,7 @@ describe('Avoid Duplicate Analysis', function () {
         File::put(base_path('docs/source_documents/short/app/Unassigned.php.md'), '# Unassigned file doc');
 
         // Step 1: Run analyze-modules (creates the initial analysis)
-        $this->artisan('documentation:analyze-modules', ['--update' => true])
+        $this->artisan('cascadedocs:analyze-modules', ['--update' => true])
             ->expectsOutput('Analyzing module assignments using AI...')
             ->assertExitCode(0);
 
@@ -133,7 +133,7 @@ describe('Avoid Duplicate Analysis', function () {
         $this->assertNotNull($log['last_analysis']);
 
         // Step 2: Run assign-files-to-modules (should NOT re-analyze)
-        $this->artisan('documentation:assign-files-to-modules', ['--dry-run' => true])
+        $this->artisan('cascadedocs:assign-files-to-modules', ['--dry-run' => true])
             ->expectsOutput('Loading current module assignments...')
             ->doesntExpectOutput('No existing analysis found. Running initial analysis...')
             ->expectsOutput('Found 1 unassigned files.')

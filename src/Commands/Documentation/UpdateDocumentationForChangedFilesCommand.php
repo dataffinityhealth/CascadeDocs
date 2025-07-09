@@ -12,7 +12,7 @@ use Lumiio\CascadeDocs\Services\Documentation\ModuleMappingService;
 
 class UpdateDocumentationForChangedFilesCommand extends Command
 {
-    protected $signature = 'update:documentation 
+    protected $signature = 'cascadedocs:update-documentation 
         {--since= : Specific commit SHA to update from}
         {--dry-run : Show what would be updated without making changes}
         {--model= : The AI model to use for generation}';
@@ -165,7 +165,7 @@ class UpdateDocumentationForChangedFilesCommand extends Command
 
             if ($total_unassigned > 0) {
                 $this->warn("Found {$total_unassigned} files without module assignments.");
-                $this->info('Run php artisan documentation:analyze-modules --suggest to see suggestions.');
+                $this->info('Run php artisan cascadedocs:analyze-modules --suggest to see suggestions.');
             }
         }
 

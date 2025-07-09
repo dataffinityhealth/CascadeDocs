@@ -56,7 +56,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('generate:ai-documentation-for-filament-files --help')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files --help')
             ->assertExitCode(0);
     }
 
@@ -68,7 +68,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
     public function test_command_has_correct_name(): void
     {
         $command = new \Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand;
-        $this->assertEquals('generate:ai-documentation-for-filament-files', $command->getName());
+        $this->assertEquals('cascadedocs:generate-ai-documentation-for-filament-files', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
@@ -98,7 +98,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->assertExitCode(0);
 
         // Check directory was created
@@ -123,7 +123,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->expectsOutput('Found 2 Filament files to document.')
             ->assertExitCode(0);
     }
@@ -139,7 +139,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
         File::put($docPath, '# Existing Documentation');
 
         // No mocking needed since file is skipped
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->expectsOutput('Found 1 Filament files to document.')
             ->assertExitCode(0);
 
@@ -171,7 +171,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->assertExitCode(0);
 
         // Verify prompt contains expected sections
@@ -202,7 +202,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->assertExitCode(0);
 
         // Check nested documentation was created
@@ -237,7 +237,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->assertExitCode(0);
 
         $this->assertEquals('custom-model', $capturedModel);
@@ -261,7 +261,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->expectsOutput('Found 3 Filament files to document.')
             ->assertExitCode(0);
     }
@@ -284,14 +284,14 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->expectsOutput('Found 1 Filament files to document.')
             ->assertExitCode(0);
     }
 
     public function test_it_handles_empty_livewire_directory(): void
     {
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->expectsOutput('Found 0 Filament files to document.')
             ->expectsOutput('Documentation generation completed successfully!')
             ->assertExitCode(0);
@@ -313,7 +313,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->assertExitCode(0);
 
         // Verify directory structure was created
@@ -340,7 +340,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->getMock()
         );
 
-        $this->artisan('generate:ai-documentation-for-filament-files')
+        $this->artisan('cascadedocs:generate-ai-documentation-for-filament-files')
             ->assertExitCode(0);
 
         // Can't easily test actual permissions in all environments

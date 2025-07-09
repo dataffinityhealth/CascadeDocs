@@ -46,7 +46,7 @@ class ModuleStatusCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('documentation:module-status --help')
+        $this->artisan('cascadedocs:module-status --help')
             ->assertExitCode(0);
     }
 
@@ -58,7 +58,7 @@ class ModuleStatusCommandTest extends TestCase
     public function test_command_has_correct_name(): void
     {
         $command = new \Lumiio\CascadeDocs\Commands\Documentation\ModuleStatusCommand;
-        $this->assertEquals('documentation:module-status', $command->getName());
+        $this->assertEquals('cascadedocs:module-status', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
@@ -78,7 +78,7 @@ class ModuleStatusCommandTest extends TestCase
             'last_analysis' => '2024-01-01T00:00:00+00:00',
         ]);
 
-        $this->artisan('documentation:module-status')
+        $this->artisan('cascadedocs:module-status')
             ->expectsOutput('Module Assignment Status')
             ->expectsOutput('========================')
             ->expectsOutput('Total documented files: 4')
@@ -112,7 +112,7 @@ class ModuleStatusCommandTest extends TestCase
             'unassigned_files' => [],
         ]);
 
-        $this->artisan('documentation:module-status', ['--summary' => true])
+        $this->artisan('cascadedocs:module-status', ['--summary' => true])
             ->expectsOutput('Total documented files: 2')
             ->expectsOutput('Assigned to modules: 2 (100.0%)')
             ->expectsOutput('Unassigned files: 0 (0.0%)')
@@ -137,7 +137,7 @@ class ModuleStatusCommandTest extends TestCase
             ],
         ]);
 
-        $this->artisan('documentation:module-status')
+        $this->artisan('cascadedocs:module-status')
             ->expectsOutput('Potential New Modules:')
             ->expectsOutput('- reporting (5 files)')
             ->expectsOutput('- notifications (3 files)')
@@ -154,7 +154,7 @@ class ModuleStatusCommandTest extends TestCase
 
     public function test_it_shows_error_for_nonexistent_module(): void
     {
-        $this->artisan('documentation:module-status', ['--module' => 'nonexistent'])
+        $this->artisan('cascadedocs:module-status', ['--module' => 'nonexistent'])
             ->expectsOutput("Module 'nonexistent' not found.")
             ->assertExitCode(1);
     }
@@ -170,7 +170,7 @@ class ModuleStatusCommandTest extends TestCase
             ],
         ]);
 
-        $this->artisan('documentation:module-status', ['--unassigned' => true])
+        $this->artisan('cascadedocs:module-status', ['--unassigned' => true])
             ->expectsOutput('Unassigned Files (3)')
             ->expectsOutput('====================')
             ->expectsOutput('Directory: app/Services')
@@ -189,7 +189,7 @@ class ModuleStatusCommandTest extends TestCase
             'unassigned_files' => [],
         ]);
 
-        $this->artisan('documentation:module-status', ['--unassigned' => true])
+        $this->artisan('cascadedocs:module-status', ['--unassigned' => true])
             ->expectsOutput('✓ No unassigned files found!')
             ->assertExitCode(0);
     }
@@ -215,7 +215,7 @@ class ModuleStatusCommandTest extends TestCase
             ],
         ]);
 
-        $this->artisan('documentation:module-status', ['--suggestions' => true])
+        $this->artisan('cascadedocs:module-status', ['--suggestions' => true])
             ->expectsOutput('Module Suggestions')
             ->expectsOutput('==================')
             ->expectsOutput('Suggested Module: payment-processing')
@@ -227,7 +227,7 @@ class ModuleStatusCommandTest extends TestCase
             ->expectsOutput('Confidence: 72%')
             ->expectsOutput('Reason: Files handle email sending and templates')
             ->expectsOutput('To create a suggested module, run:')
-            ->expectsOutput('php artisan documentation:create-module <name> --from-suggestion')
+            ->expectsOutput('php artisan cascadedocs:create-module <name> --from-suggestion')
             ->assertExitCode(0);
     }
 
@@ -239,7 +239,7 @@ class ModuleStatusCommandTest extends TestCase
             'module_suggestions' => [],
         ]);
 
-        $this->artisan('documentation:module-status', ['--suggestions' => true])
+        $this->artisan('cascadedocs:module-status', ['--suggestions' => true])
             ->expectsOutput('No module suggestions available. Run analyze-modules first.')
             ->assertExitCode(0);
     }
@@ -251,7 +251,7 @@ class ModuleStatusCommandTest extends TestCase
             'unassigned_files' => [],
         ]);
 
-        $this->artisan('documentation:module-status')
+        $this->artisan('cascadedocs:module-status')
             ->expectsOutput('Total documented files: 0')
             ->expectsOutputToContain('Assigned to modules: 0')
             ->expectsOutputToContain('Unassigned files: 0')

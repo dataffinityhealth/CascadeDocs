@@ -16,7 +16,7 @@ use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
 
 class UpdateDocumentationAfterMergeCommand extends Command
 {
-    protected $signature = 'documentation:update-after-merge 
+    protected $signature = 'cascadedocs:update-after-merge 
                             {--since= : Override the last update SHA}
                             {--model= : AI model to use}
                             {--dry-run : Show what would be updated}
@@ -242,7 +242,7 @@ class UpdateDocumentationAfterMergeCommand extends Command
         }
 
         // Run the assignment command with auto-create and force
-        $this->call('documentation:assign-files-to-modules', [
+        $this->call('cascadedocs:assign-files-to-modules', [
             '--model' => $model,
             '--limit' => $limit,
             '--auto-create' => true,

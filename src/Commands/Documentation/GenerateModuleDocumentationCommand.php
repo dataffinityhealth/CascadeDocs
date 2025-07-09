@@ -27,7 +27,7 @@ class GenerateModuleDocumentationCommand extends Command
             if ($this->option('fresh')) {
                 $this->warn('Running fresh analysis as requested...');
             }
-            $this->call('documentation:analyze-modules', ['--update' => true]);
+            $this->call('cascadedocs:analyze-modules', ['--update' => true]);
         } else {
             $this->info('Step 1: Module assignment analysis already exists, skipping...');
             $log = json_decode(File::get($moduleAssignmentLogPath), true);
@@ -38,7 +38,7 @@ class GenerateModuleDocumentationCommand extends Command
 
         // Step 2: Assign files to modules
         $this->info("\nStep 2: Assigning files to modules...");
-        $this->call('documentation:assign-files-to-modules', [
+        $this->call('cascadedocs:assign-files-to-modules', [
             '--force' => true,
             '--model' => $model,
             '--auto-create' => true,
@@ -46,11 +46,11 @@ class GenerateModuleDocumentationCommand extends Command
 
         // Step 3: Sync module assignments
         $this->info("\nStep 3: Syncing module assignments...");
-        $this->call('documentation:sync-module-assignments');
+        $this->call('cascadedocs:sync-module-assignments');
 
         // Step 4: Update all module documentation
         $this->info("\nStep 4: Generating module documentation...");
-        $this->call('documentation:update-all-modules', [
+        $this->call('cascadedocs:update-all-modules', [
             '--model' => $model,
             '--force' => true, // Skip confirmation in automated flow
         ]);
@@ -61,7 +61,7 @@ class GenerateModuleDocumentationCommand extends Command
 
         // Step 6: Show module status
         $this->info("\nStep 6: Module documentation status:");
-        $this->call('documentation:module-status');
+        $this->call('cascadedocs:module-status');
 
         $this->newLine();
         $this->info('✓ Module documentation generation complete!');

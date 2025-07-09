@@ -10,7 +10,7 @@ use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentService;
 
 class CreateModuleCommand extends Command
 {
-    protected $signature = 'documentation:create-module 
+    protected $signature = 'cascadedocs:create-module 
         {name : The module slug name}
         {--files=* : Specific files to include}
         {--from-suggestion : Use files from a suggested module}
@@ -71,7 +71,7 @@ class CreateModuleCommand extends Command
         $this->newLine();
         $this->info('Next steps:');
         $this->line('1. Review and edit the module file as needed');
-        $this->line('2. Run php artisan update:documentation to generate module documentation');
+        $this->line('2. Run php artisan cascadedocs:update-documentation to generate module documentation');
 
         return 0;
     }

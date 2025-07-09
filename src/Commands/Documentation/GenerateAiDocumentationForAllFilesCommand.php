@@ -9,7 +9,7 @@ use Lumiio\CascadeDocs\Jobs\Documentation\GenerateAiDocumentationForFileJob;
 
 class GenerateAiDocumentationForAllFilesCommand extends Command
 {
-    protected $signature = 'generate:ai-documentation 
+    protected $signature = 'cascadedocs:generate-ai-documentation 
         {--paths=*} 
         {--default-paths}
         {--tier=all : micro|standard|expansive|all}

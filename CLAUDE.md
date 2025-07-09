@@ -26,20 +26,21 @@ composer analyse             # Run PHPStan static analysis
 ### Documentation Generation Commands
 ```bash
 # Generate documentation tiers
-php artisan docs:generate micro      # Quick summaries
-php artisan docs:generate standard   # Balanced documentation
-php artisan docs:generate expansive  # Comprehensive documentation
+php artisan cascadedocs:generate-ai-documentation --tier=micro      # Quick summaries
+php artisan cascadedocs:generate-ai-documentation --tier=standard   # Balanced documentation
+php artisan cascadedocs:generate-ai-documentation --tier=expansive  # Comprehensive documentation
 
 # Update documentation (Git-based incremental)
-php artisan docs:update              # Update based on recent changes
+php artisan cascadedocs:update-documentation         # Update based on recent changes
+php artisan cascadedocs:update-changed               # Update all changed files, modules, and architecture
 
 # Architecture documentation
-php artisan docs:architecture        # Generate system architecture docs
+php artisan cascadedocs:generate-architecture-docs   # Generate system architecture docs
 
 # Module management
-php artisan docs:modules             # Show current module assignments
-php artisan docs:import-modules      # Import from YAML file
-php artisan cascadedocs:generate-module-docs  # Full module documentation flow
+php artisan cascadedocs:module-status                # Show current module assignments
+php artisan cascadedocs:create-module                # Create a new module
+php artisan cascadedocs:generate-module-docs         # Full module documentation flow
 ```
 
 ### Module Documentation Flow

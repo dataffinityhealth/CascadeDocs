@@ -45,7 +45,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
 
     public function test_it_has_correct_signature(): void
     {
-        $this->artisan('documentation:update-after-merge --help')
+        $this->artisan('cascadedocs:update-after-merge --help')
             ->assertExitCode(0);
     }
 
@@ -57,7 +57,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
     public function test_command_has_correct_name(): void
     {
         $command = new \Lumiio\CascadeDocs\Commands\Documentation\UpdateDocumentationAfterMergeCommand;
-        $this->assertEquals('documentation:update-after-merge', $command->getName());
+        $this->assertEquals('cascadedocs:update-after-merge', $command->getName());
     }
 
     public function test_command_has_correct_description(): void
@@ -76,7 +76,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('documentation:update-after-merge')
+        $this->artisan('cascadedocs:update-after-merge')
             ->expectsOutput('Starting complete documentation update workflow...')
             ->expectsOutput('No previous update SHA found. Please run with --since=<commit-sha>')
             ->assertExitCode(1);
@@ -97,7 +97,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('documentation:update-after-merge')
+        $this->artisan('cascadedocs:update-after-merge')
             ->expectsOutput('Documentation is already up to date.')
             ->assertExitCode(0);
     }
@@ -119,7 +119,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('documentation:update-after-merge')
+        $this->artisan('cascadedocs:update-after-merge')
             ->expectsOutput('Analyzing changes from abc123 to def456')
             ->expectsOutput('No documentable files have changed.')
             ->assertExitCode(0);
@@ -144,7 +144,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('documentation:update-after-merge', ['--dry-run' => true])
+        $this->artisan('cascadedocs:update-after-merge', ['--dry-run' => true])
             ->expectsOutput('Found 2 changed files:')
             ->expectsOutputToContain('Dry run mode - no changes will be made.')
             ->expectsOutputToContain('Files that would be updated:')
@@ -173,7 +173,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'modules' => [],
         ]));
 
-        $this->artisan('documentation:update-after-merge', ['--since' => 'custom123'])
+        $this->artisan('cascadedocs:update-after-merge', ['--since' => 'custom123'])
             ->expectsOutput('Analyzing changes from custom123 to def456')
             ->expectsOutput('No documentable files have changed.')
             ->assertExitCode(0);
@@ -204,7 +204,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'unassigned_files' => [],
         ]));
 
-        $this->artisan('documentation:update-after-merge', ['--model' => 'claude-3'])
+        $this->artisan('cascadedocs:update-after-merge', ['--model' => 'claude-3'])
             ->expectsOutputToContain('Processing 1 new files...')
             ->assertExitCode(0);
 
@@ -242,7 +242,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'unassigned_files' => [],
         ]));
 
-        $this->artisan('documentation:update-after-merge')
+        $this->artisan('cascadedocs:update-after-merge')
             ->expectsOutput('Found 2 changed files:')
             ->expectsOutputToContain('Processing 1 new files...')
             ->expectsOutputToContain('Processing 1 changed files...')
@@ -282,7 +282,7 @@ class UpdateDocumentationAfterMergeCommandTest extends TestCase
             'unassigned_files' => $unassignedFiles,
         ]));
 
-        $this->artisan('documentation:update-after-merge', ['--limit' => 10])
+        $this->artisan('cascadedocs:update-after-merge', ['--limit' => 10])
             ->expectsOutput('No documentable files have changed.')
             ->assertExitCode(0);
     }

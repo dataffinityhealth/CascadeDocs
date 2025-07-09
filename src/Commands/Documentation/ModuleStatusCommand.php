@@ -10,7 +10,7 @@ use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentService;
 
 class ModuleStatusCommand extends Command
 {
-    protected $signature = 'documentation:module-status
+    protected $signature = 'cascadedocs:module-status
         {--module= : Show status for specific module}
         {--unassigned : Show only unassigned files}
         {--suggestions : Show module suggestions}
@@ -219,7 +219,7 @@ class ModuleStatusCommand extends Command
 
         $this->newLine();
         $this->info('To create a suggested module, run:');
-        $this->line('php artisan documentation:create-module <name> --from-suggestion');
+        $this->line('php artisan cascadedocs:create-module <name> --from-suggestion');
 
         return 0;
     }
