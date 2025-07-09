@@ -140,51 +140,6 @@ class DocumentationDiffService
         return trim($result->output());
     }
 
-    public function load_update_log(): array
-    {
-        $log_path = base_path(config('cascadedocs.paths.tracking.documentation_update'));
-
-        if (! File::exists($log_path)) {
-            return [
-                'last_update_sha' => null,
-                'last_update_timestamp' => null,
-                'files' => [],
-                'modules' => [],
-            ];
-        }
-
-        $content = File::get($log_path);
-
-        return json_decode($content, true);
-    }
-
-    public function save_update_log(array $log): void
-    {
-        $log_path = base_path(config('cascadedocs.paths.tracking.documentation_update'));
-
-        // Ensure the directory exists
-        $directory = dirname($log_path);
-        if (! File::exists($directory)) {
-            File::makeDirectory($directory, 0755, true);
-        }
-
-        File::put($log_path, json_encode($log, JSON_PRETTY_PRINT));
-    }
-
-    public function needs_documentation_update(string $file_path, array $update_log): bool
-    {
-        $relative_path = $this->get_relative_path($file_path);
-
-        if (! isset($update_log['files'][$relative_path])) {
-            return true;
-        }
-
-        $current_sha = $this->get_file_last_commit_sha($file_path);
-        $documented_sha = $update_log['files'][$relative_path]['sha'] ?? null;
-
-        return $current_sha !== $documented_sha;
-    }
-
     protected function is_documentable_file(string $file_path): bool
     {
         $extension = pathinfo($file_path, PATHINFO_EXTENSION);
@@ -196,9 +151,12 @@ class DocumentationDiffService
 
         // Only document files in configured source directories
         $sourceDirs = config('cascadedocs.paths.source');
+        $relativePath = $this->get_relative_path($file_path);
+
         $inSourceDir = false;
         foreach ($sourceDirs as $dir) {
-            if (Str::startsWith($file_path, $dir)) {
+            // Check both against the full path and relative path
+            if (Str::startsWith($file_path, $dir) || Str::startsWith($relativePath, $dir)) {
                 $inSourceDir = true;
                 break;
             }
@@ -208,7 +166,7 @@ class DocumentationDiffService
         }
 
         // Skip test files
-        return ! (Str::contains($file_path, ['tests/', 'test.', 'Test.']));
+        return ! Str::contains($file_path, ['tests/', 'test.', 'Test.']);
     }
 
     public function get_relative_path(string $file_path): string
@@ -258,5 +216,255 @@ class DocumentationDiffService
         }
 
         return $summary;
+    }
+
+    public function get_files_needing_update(): Collection
+    {
+        $filesNeedingUpdate = collect();
+
+        // Get the full documentation path
+        $fullDocPath = base_path('docs/source_documents/full');
+
+        if (! File::isDirectory($fullDocPath)) {
+            // No documentation exists yet, all files need documenting
+            return $this->get_all_undocumented_files();
+        }
+
+        // Scan all documentation files recursively
+        $docFiles = collect(File::allFiles($fullDocPath))
+            ->filter(fn ($file) => $file->getExtension() === 'md');
+
+        // Process each documentation file
+        foreach ($docFiles as $docFile) {
+            $docPath = $docFile->getPathname();
+            $docInfo = $this->extract_doc_metadata($docPath);
+
+            if (! $docInfo) {
+                continue;
+            }
+
+            if (! isset($docInfo['source_path']) || ! isset($docInfo['commit_sha'])) {
+                continue;
+            }
+
+            // Get the full source path
+            $sourcePath = base_path($docInfo['source_path']);
+
+            // Check if source file still exists
+            if (! File::exists($sourcePath)) {
+                continue; // File was deleted, skip
+            }
+
+            // Check if it's still a documentable file
+            if (! $this->is_documentable_file($sourcePath)) {
+                continue;
+            }
+
+            // Get current SHA of the source file
+            $currentSha = $this->get_file_last_commit_sha($sourcePath);
+
+            // Compare SHAs
+            if ($currentSha !== $docInfo['commit_sha']) {
+                $filesNeedingUpdate->push([
+                    'path' => $sourcePath,
+                    'relative_path' => $docInfo['source_path'],
+                    'current_sha' => $currentSha,
+                    'documented_sha' => $docInfo['commit_sha'],
+                    'needs_update' => true,
+                    'doc_path' => $docPath,
+                ]);
+            }
+        }
+
+        // Also check for new files that don't have documentation yet
+        $documentedPaths = $filesNeedingUpdate->pluck('relative_path')
+            ->merge($this->get_all_documented_source_paths());
+
+        $undocumentedFiles = $this->get_all_undocumented_files($documentedPaths);
+
+        return $filesNeedingUpdate->merge($undocumentedFiles);
+    }
+
+    public function extract_sha_from_documentation(string $docPath): ?string
+    {
+        if (! File::exists($docPath)) {
+            return null;
+        }
+
+        $content = File::get($docPath);
+
+        // Extract YAML frontmatter - try both --- and ``` formats
+        $yaml = null;
+        if (preg_match('/^---\n(.*?)\n---/s', $content, $matches)) {
+            $yaml = $matches[1];
+        } elseif (preg_match('/^```yaml\n(.*?)\n```/s', $content, $matches)) {
+            $yaml = $matches[1];
+        }
+
+        if ($yaml && preg_match('/^commit_sha:\s*([a-f0-9]{40})/m', $yaml, $shaMatch)) {
+            return $shaMatch[1];
+        }
+
+        return null;
+    }
+
+    public function extract_doc_metadata(string $docPath): ?array
+    {
+        if (! File::exists($docPath)) {
+            return null;
+        }
+
+        $content = File::get($docPath);
+
+        // Extract YAML frontmatter - try both --- and ``` formats
+        $yamlPattern1 = '/^---\n(.*?)\n---/s';
+        $yamlPattern2 = '/^```yaml\n(.*?)\n```/s';
+
+        $yaml = null;
+        if (preg_match($yamlPattern1, $content, $matches)) {
+            $yaml = $matches[1];
+        } elseif (preg_match($yamlPattern2, $content, $matches)) {
+            $yaml = $matches[1];
+        }
+
+        if ($yaml) {
+            $metadata = [];
+
+            // Extract source_path
+            if (preg_match('/^source_path:\s*(.+)$/m', $yaml, $pathMatch)) {
+                $metadata['source_path'] = trim($pathMatch[1]);
+            }
+
+            // Extract commit_sha
+            if (preg_match('/^commit_sha:\s*([a-f0-9]{40})/m', $yaml, $shaMatch)) {
+                $metadata['commit_sha'] = $shaMatch[1];
+            }
+
+            // Extract doc_tier
+            if (preg_match('/^doc_tier:\s*(.+)$/m', $yaml, $tierMatch)) {
+                $metadata['doc_tier'] = trim($tierMatch[1]);
+            }
+
+            return $metadata;
+        }
+
+        return null;
+    }
+
+    private function get_all_undocumented_files(?Collection $documentedPaths = null): Collection
+    {
+        $files = collect();
+        $sourcePaths = config('cascadedocs.paths.source');
+
+        // Get all documentable files
+        foreach ($sourcePaths as $sourcePath) {
+            $fullPath = base_path($sourcePath);
+            if (File::isDirectory($fullPath)) {
+                $this->scanDirectory($fullPath, $files);
+            }
+        }
+
+        // If we have documented paths, filter them out
+        if ($documentedPaths !== null && $documentedPaths->isNotEmpty()) {
+            $files = $files->filter(function ($filePath) use ($documentedPaths) {
+                $relativePath = $this->get_relative_path($filePath);
+
+                return ! $documentedPaths->contains($relativePath);
+            });
+        }
+
+        // Return in the same format as documented files
+        return $files->map(function ($filePath) {
+            return [
+                'path' => $filePath,
+                'relative_path' => $this->get_relative_path($filePath),
+                'current_sha' => $this->get_file_last_commit_sha($filePath),
+                'documented_sha' => null,
+                'needs_update' => true,
+                'doc_path' => null,
+            ];
+        });
+    }
+
+    private function get_all_documented_source_paths(): Collection
+    {
+        $fullDocPath = base_path('docs/source_documents/full');
+
+        if (! File::isDirectory($fullDocPath)) {
+            return collect();
+        }
+
+        $docFiles = collect(File::allFiles($fullDocPath))
+            ->filter(fn ($file) => $file->getExtension() === 'md');
+
+        $paths = collect();
+
+        foreach ($docFiles as $docFile) {
+            $docInfo = $this->extract_doc_metadata($docFile->getPathname());
+            if ($docInfo && isset($docInfo['source_path'])) {
+                $paths->push($docInfo['source_path']);
+            }
+        }
+
+        return $paths->unique();
+    }
+
+    private function getDocumentationPath(string $filePath): string
+    {
+        $relativePath = $this->get_relative_path($filePath);
+        // Remove leading slash if present
+        $relativePath = ltrim($relativePath, '/');
+        // Replace directory separators with underscores and append .md
+        $docName = str_replace('/', '_', $relativePath).'.md';
+
+        return base_path('docs/source_documents/full/'.$docName);
+    }
+
+    private function scanDirectory(string $directory, Collection &$files): void
+    {
+        $excludedDirs = config('cascadedocs.exclude.directories', []);
+        $excludedPatterns = config('cascadedocs.exclude.patterns', []);
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $filePath = $file->getPathname();
+                $relativePath = $this->get_relative_path($filePath);
+
+                // Skip excluded directories
+                $skip = false;
+                foreach ($excludedDirs as $excludedDir) {
+                    if (Str::contains($relativePath, $excludedDir.'/')) {
+                        $skip = true;
+                        break;
+                    }
+                }
+
+                if ($skip) {
+                    continue;
+                }
+
+                // Skip excluded patterns
+                foreach ($excludedPatterns as $pattern) {
+                    if (fnmatch($pattern, basename($filePath))) {
+                        $skip = true;
+                        break;
+                    }
+                }
+
+                if ($skip) {
+                    continue;
+                }
+
+                // Check if it's a documentable file
+                if ($this->is_documentable_file($filePath)) {
+                    $files->push($filePath);
+                }
+            }
+        }
     }
 }

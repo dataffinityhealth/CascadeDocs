@@ -16,15 +16,16 @@ class AssignFilesToModulesCommand extends Command
 
     protected $signature = 'cascadedocs:assign-files-to-modules
         {--dry-run : Preview changes without applying them}
-        {--auto-create : Automatically create suggested new modules}
+        {--auto-create : (Deprecated) Module creation is now automatic when you approve changes}
         {--confidence= : Minimum confidence threshold for auto-assignment}
         {--interactive : Prompt for confirmation on low-confidence assignments}
         {--limit=0 : Process only N unassigned files (0 = all)}
         {--output-prompt : Output the generated prompt to a file}
         {--model= : The AI model to use for assignment}
-        {--force : Apply changes without confirmation}';
+        {--force : Apply changes without confirmation}
+        {--skip-update : Skip running update-all-modules after assignment}';
 
-    protected $description = 'Assign unassigned documentation files to modules using AI suggestions';
+    protected $description = 'Assign unassigned files to modules using AI (creates new modules as needed)';
 
     protected ModuleAssignmentAIService $aiService;
 
@@ -253,8 +254,8 @@ class AssignFilesToModulesCommand extends Command
             }
         }
 
-        // Create new modules if auto-create is enabled
-        if (! empty($processed['create_new_modules']) && $this->option('auto-create')) {
+        // Create new modules
+        if (! empty($processed['create_new_modules'])) {
             $this->info('Creating new modules...');
 
             $results = $this->aiService->createNewModules($processed['create_new_modules']);
@@ -266,8 +267,6 @@ class AssignFilesToModulesCommand extends Command
             foreach ($results['failed'] as $failure) {
                 $this->error("✗ Failed to create {$failure['module']}: {$failure['reason']}");
             }
-        } elseif (! empty($processed['create_new_modules'])) {
-            $this->warn('New modules suggested but --auto-create not enabled. Run with --auto-create to create them.');
         }
 
         // Handle interactive mode for low confidence
@@ -275,16 +274,20 @@ class AssignFilesToModulesCommand extends Command
             $this->handleLowConfidenceInteractive($processed['low_confidence']);
         }
 
-        // Sync module assignments to ensure consistency
-        $this->info('Syncing module assignments...');
-        $this->call('cascadedocs:sync-module-assignments', ['--quiet' => true]);
-
-        // Update the analysis to reflect the changes we just made
-        // This is necessary because we've modified the module structure
-        $this->info('Updating module assignment analysis...');
-        $this->aiService->analyze_module_assignments();
-
         $this->info('✓ Module assignments updated successfully!');
+
+        // Sync module assignments to update metadata
+        $this->info('Syncing module assignments...');
+        $this->call('cascadedocs:sync-module-assignments');
+
+        // Automatically run update-all-modules unless skipped
+        if (!$this->option('skip-update')) {
+            $this->info('Running module documentation updates...');
+            $this->call('cascadedocs:update-all-modules', [
+                '--force' => true,
+                '--model' => $this->option('model')
+            ]);
+        }
     }
 
     protected function handleLowConfidenceInteractive(array $lowConfidence): void

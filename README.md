@@ -149,15 +149,80 @@ php artisan cascadedocs:generate-class-docs --model=gpt-4
 
 ### Module Documentation
 
-```bash
-# Complete module workflow (recommended)
-php artisan cascadedocs:generate-module-docs
+#### Understanding the Module Workflow
 
-# Or run individual steps:
-php artisan cascadedocs:analyze-modules          # AI analyzes optimal module structure
-php artisan cascadedocs:assign-files-to-modules  # Assigns files to modules
-php artisan cascadedocs:update-all-modules       # Generates module documentation
-php artisan cascadedocs:generate-module-index      # Creates searchable index
+CascadeDocs uses modules to group related files together. The module system has two distinct phases:
+
+1. **Module Assignment** - Deciding which files belong to which modules
+2. **Documentation Generation** - Creating documentation for those modules
+
+**Important**: The `update-all-modules` command only updates documentation for existing modules with already-assigned files. It does NOT create new modules or assign unassigned files.
+
+#### Complete Module Workflow
+
+```bash
+# Recommended: Run the complete workflow
+php artisan cascadedocs:generate-module-docs
+```
+
+This command orchestrates the entire process:
+1. Analyzes module structure (skipped if already done)
+2. Assigns unassigned files to modules
+3. Syncs module assignments
+4. Updates all module documentation
+5. Shows final module status
+
+#### Manual Module Management
+
+For more control over module creation:
+
+```bash
+# 1. Check current module status and unassigned files
+php artisan cascadedocs:module-status
+
+# 2. Get AI suggestions for unassigned files (preview only)
+php artisan cascadedocs:assign-files-to-modules --dry-run
+
+# 3. Review and apply suggestions
+php artisan cascadedocs:assign-files-to-modules
+# You'll be shown the suggestions and asked:
+#   - "Yes": Apply all changes (assigns files AND creates new modules)
+#   - "No": Cancel without changes
+#   - "Feedback": Provide feedback for better suggestions
+
+# 4. Generate documentation for the modules
+php artisan cascadedocs:update-all-modules
+
+# Optional: Skip confirmation prompts
+php artisan cascadedocs:assign-files-to-modules --force
+```
+
+#### Interactive Assignment
+
+For maximum control:
+
+```bash
+# Review each suggestion individually
+php artisan cascadedocs:assign-files-to-modules --interactive
+
+# Process only a few files at a time
+php artisan cascadedocs:assign-files-to-modules --limit=5
+```
+
+#### Other Module Commands
+
+```bash
+# View detailed module analysis
+php artisan cascadedocs:analyze-modules --suggest
+
+# Create a module manually
+php artisan cascadedocs:create-module
+
+# Force fresh analysis (ignores cache)
+php artisan cascadedocs:generate-module-docs --fresh
+
+# Generate module index
+php artisan cascadedocs:generate-module-index
 ```
 
 ### Update Documentation
@@ -210,16 +275,21 @@ return [
 
 ## Tracking Files
 
-CascadeDocs maintains several JSON files to enable efficient updates:
-
-### `docs/documentation-update-log.json`
-Tracks the last commit SHA for each documented file, enabling incremental updates.
+CascadeDocs maintains several files to track state and enable efficient updates:
 
 ### `docs/module-assignment-log.json`
-Caches the AI's module organization analysis to maintain consistency across runs.
+Caches the AI's module organization analysis to maintain consistency across runs. This includes which files are assigned to which modules and any unassigned files.
 
 ### `docs/source_documents/modules/metadata/*.json`
 Individual module metadata including file assignments, summaries, and documentation status.
+
+### Documentation Files (YAML Frontmatter)
+Each documentation file in `docs/source_documents/full/` contains YAML frontmatter with:
+- `source_path`: The original source file path
+- `commit_sha`: The Git SHA when the documentation was generated
+- `doc_tier`: The documentation tier level
+
+This embedded metadata enables CascadeDocs to detect when files have changed since their documentation was last generated.
 
 These files should be committed to your repository to maintain state across team members.
 
@@ -253,6 +323,15 @@ $module = CascadeDocs::getFileModule('app/Services/UserService.php');
 
 ### "No modules found"
 Run `php artisan cascadedocs:generate-class-docs` first to create the base documentation.
+
+### "No modules have undocumented files" but I have unassigned files
+This is a common confusion. The `update-all-modules` command only updates documentation for files that are already assigned to modules. To handle unassigned files:
+
+1. Run `php artisan cascadedocs:module-status` to see unassigned files
+2. Run `php artisan cascadedocs:assign-files-to-modules --auto-create` to assign them to modules
+3. THEN run `php artisan cascadedocs:update-all-modules` to generate their documentation
+
+Remember: Module assignment and documentation generation are separate steps!
 
 ### "AI response contains placeholder text"
 The AI model is returning incomplete responses. Try using a different model (e.g., GPT-4 instead of GPT-3.5, or Claude instead of OpenAI).

@@ -183,9 +183,6 @@ class UpdateModuleDocumentationJob implements ShouldQueue
             // 5. Save the metadata as the last step
             $metadata_service->saveMetadata($this->module_slug, $metadata);
 
-            // 6. Update the log (this is less critical)
-            $this->update_module_in_log($this->module_slug);
-
             logger()->info('Successfully updated module documentation', [
                 'module_slug' => $this->module_slug,
                 'files_documented' => count($undocumented_files),
@@ -295,18 +292,7 @@ class UpdateModuleDocumentationJob implements ShouldQueue
         return base_path("{$outputPath}{$tierDir}/{$doc_file}");
     }
 
-    protected function update_module_in_log(string $module_slug): void
-    {
-        $diff_service = new DocumentationDiffService;
-        $log = $diff_service->load_update_log();
 
-        $log['modules'][$module_slug] = [
-            'sha' => $this->to_sha,
-            'last_updated' => Carbon::now()->toIso8601String(),
-        ];
-
-        $diff_service->save_update_log($log);
-    }
 
     protected function extract_module_summary(string $content): ?string
     {
@@ -415,7 +401,7 @@ Your response should be a complete markdown document starting with:
 
 Followed by all necessary sections with detailed, specific content based on the actual code and functionality shown in the file documentation.
 
-Remember: 
+Remember:
 - Write as if you're explaining to a new developer who needs to understand how this MODULE works as a system
 - Focus on the interactions, workflows, and overall architecture
 - Do NOT just summarize what each file does - explain how they work TOGETHER

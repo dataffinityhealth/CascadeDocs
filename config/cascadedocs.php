@@ -28,7 +28,6 @@ return [
         // Log and tracking files
         'tracking' => [
             'module_assignment' => 'docs/module-assignment-log.json',
-            'documentation_update' => 'docs/documentation-update-log.json',
             'feedback' => 'docs/module-assignment-feedback.txt',
             'generated_prompt' => 'docs/generated-assignment-prompt.md',
         ],
