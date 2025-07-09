@@ -281,11 +281,11 @@ class AssignFilesToModulesCommand extends Command
         $this->call('cascadedocs:sync-module-assignments');
 
         // Automatically run update-all-modules unless skipped
-        if (!$this->option('skip-update')) {
+        if (! $this->option('skip-update')) {
             $this->info('Running module documentation updates...');
             $this->call('cascadedocs:update-all-modules', [
                 '--force' => true,
-                '--model' => $this->option('model')
+                '--model' => $this->option('model'),
             ]);
         }
     }
