@@ -140,6 +140,66 @@ class DocumentationDiffService
         return trim($result->output());
     }
 
+    public function load_update_log(): array
+    {
+        $path = $this->getUpdateLogPath();
+
+        if (! File::exists($path)) {
+            return $this->defaultUpdateLogStructure();
+        }
+
+        $contents = File::get($path);
+        $decoded = json_decode($contents, true);
+
+        if (! is_array($decoded)) {
+            return $this->defaultUpdateLogStructure();
+        }
+
+        $log = array_merge($this->defaultUpdateLogStructure(), $decoded);
+        $log['files'] = is_array($log['files']) ? $log['files'] : [];
+        $log['modules'] = is_array($log['modules']) ? $log['modules'] : [];
+
+        return $log;
+    }
+
+    public function save_update_log(array $log): void
+    {
+        $path = $this->getUpdateLogPath();
+        $directoryPermissions = config('cascadedocs.permissions.directory', 0755);
+
+        File::ensureDirectoryExists(dirname($path), $directoryPermissions);
+
+        $payload = $log;
+        $payload['files'] = is_array($payload['files'] ?? null) ? $payload['files'] : [];
+
+        if (array_key_exists('modules', $payload)) {
+            $payload['modules'] = is_array($payload['modules']) ? $payload['modules'] : [];
+        }
+
+        File::put(
+            $path,
+            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+        );
+    }
+
+    public function needs_documentation_update(string $filePath, array $updateLog): bool
+    {
+        $relativePath = $this->get_relative_path($filePath);
+        $documentedSha = $updateLog['files'][$relativePath]['sha'] ?? null;
+
+        if (! $documentedSha) {
+            return true;
+        }
+
+        $currentSha = $this->get_file_last_commit_sha($filePath);
+
+        if (! $currentSha) {
+            return true;
+        }
+
+        return $currentSha !== $documentedSha;
+    }
+
     protected function is_documentable_file(string $file_path): bool
     {
         $extension = pathinfo($file_path, PATHINFO_EXTENSION);
@@ -466,5 +526,22 @@ class DocumentationDiffService
                 }
             }
         }
+    }
+
+    private function getUpdateLogPath(): string
+    {
+        $relative = config('cascadedocs.paths.tracking.documentation_update', 'docs/documentation-update-log.json');
+
+        return base_path($relative);
+    }
+
+    private function defaultUpdateLogStructure(): array
+    {
+        return [
+            'last_update_sha' => null,
+            'last_update_timestamp' => null,
+            'files' => [],
+            'modules' => [],
+        ];
     }
 }

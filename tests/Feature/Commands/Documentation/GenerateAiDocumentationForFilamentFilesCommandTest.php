@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\File;
 use Lumiio\CascadeDocs\Commands\Documentation\GenerateAiDocumentationForFilamentFilesCommand;
 use Lumiio\CascadeDocs\Tests\TestCase;
 use Mockery;
+use Shawnveltman\LaravelOpenai\Enums\ThinkingEffort;
 
 class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
 {
@@ -162,9 +163,27 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->shouldAllowMockingProtectedMethods()
                 ->shouldReceive('get_response_from_provider')
                 ->once()
-                ->withArgs(function ($prompt) use (&$capturedPrompt) {
+                ->withArgs(function (
+                    $prompt,
+                    $model,
+                    $userId,
+                    $assistantStarterText,
+                    $description,
+                    $jobUuid,
+                    $jsonMode,
+                    $temperature,
+                    $systemPrompt,
+                    $messages,
+                    $imageUrls,
+                    $thinkingEffort,
+                    $maxTokens = 64000
+                ) use (&$capturedPrompt) {
                     $capturedPrompt = $prompt;
 
+                    expect($jsonMode)->toBeFalse();
+                    expect($thinkingEffort)->toBeInstanceOf(ThinkingEffort::class);
+                    expect($thinkingEffort)->toBe(ThinkingEffort::HIGH);
+                    expect($maxTokens)->toBe(64000);
                     return true;
                 })
                 ->andReturn('## Generated Documentation')
@@ -228,8 +247,27 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                 ->shouldAllowMockingProtectedMethods()
                 ->shouldReceive('get_response_from_provider')
                 ->once()
-                ->withArgs(function ($prompt, $model) use (&$capturedModel) {
+                ->withArgs(function (
+                    $prompt,
+                    $model,
+                    $userId,
+                    $assistantStarterText,
+                    $description,
+                    $jobUuid,
+                    $jsonMode,
+                    $temperature,
+                    $systemPrompt,
+                    $messages,
+                    $imageUrls,
+                    $thinkingEffort,
+                    $maxTokens = 64000
+                ) use (&$capturedModel) {
                     $capturedModel = $model;
+
+                    expect($jsonMode)->toBeFalse();
+                    expect($thinkingEffort)->toBeInstanceOf(ThinkingEffort::class);
+                    expect($thinkingEffort)->toBe(ThinkingEffort::HIGH);
+                    expect($maxTokens)->toBe(64000);
 
                     return true;
                 })

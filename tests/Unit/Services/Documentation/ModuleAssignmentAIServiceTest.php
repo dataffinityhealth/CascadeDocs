@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Config;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentAIService;
+use Shawnveltman\LaravelOpenai\Enums\ThinkingEffort;
 
 beforeEach(function () {
     Config::set('cascadedocs.ai.default_model', 'gpt-4o');
@@ -116,12 +117,31 @@ describe('ModuleAssignmentAIService', function () {
                 ->makePartial()
                 ->shouldReceive('get_response_from_provider')
                 ->once()
-                ->withArgs(function ($prompt, $model, $json_mode) {
+                ->withArgs(function (
+                    $prompt,
+                    $model,
+                    $userId,
+                    $assistantStarterText,
+                    $description,
+                    $jobUuid,
+                    $jsonMode,
+                    $temperature,
+                    $systemPrompt,
+                    $messages,
+                    $imageUrls,
+                    $thinkingEffort,
+                    $maxTokens = 64000
+                ) {
                     expect($prompt)
                         ->toContain('software documentation system')
                         ->toContain('functionality and relationships')
                         ->not->toContain('healthcare')
                         ->not->toContain('medical');
+
+                    expect($jsonMode)->toBeTrue();
+                    expect($thinkingEffort)->toBeInstanceOf(ThinkingEffort::class);
+                    expect($thinkingEffort)->toBe(ThinkingEffort::HIGH);
+                    expect($maxTokens)->toBe(64000);
 
                     return true;
                 })

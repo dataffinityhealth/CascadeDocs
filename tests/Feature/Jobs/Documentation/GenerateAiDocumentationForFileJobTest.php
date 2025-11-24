@@ -260,14 +260,17 @@ JS;
             }
 
             // Otherwise it's Claude format
-            // For JSON mode, ClaudeTrait adds '{' prefix, so we need to return JSON without the opening brace
             $jsonContent = json_encode($documentation);
-            $jsonWithoutOpeningBrace = substr($jsonContent, 1); // Remove the opening '{'
+
+            $payload = json_decode($request->body(), true) ?? [];
+            $thinkingEnabled = data_get($payload, 'thinking.type') === 'enabled';
+
+            $contentText = $thinkingEnabled ? $jsonContent : substr($jsonContent, 1);
 
             return Http::response([
                 'content' => [
                     [
-                        'text' => $jsonWithoutOpeningBrace,
+                        'text' => $contentText,
                         'type' => 'text',
                     ],
                 ],

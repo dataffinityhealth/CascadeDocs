@@ -13,6 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
+use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\Exceptions\OpenAiApiException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
@@ -24,6 +25,7 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
+    use ResolvesThinkingEffort;
 
     public int $tries = 3;
 
@@ -126,7 +128,12 @@ class UpdateModuleDocumentationJob implements ShouldQueue
                 'model' => $this->model,
             ]);
 
-            $response = $this->get_response_from_provider($prompt, $this->model, json_mode: false);
+            $response = $this->get_response_from_provider(
+                $prompt,
+                $this->model,
+                json_mode: false,
+                thinking_effort: $this->resolveThinkingEffort()
+            );
 
             // Validate response doesn't contain placeholders
             $placeholder_patterns = [

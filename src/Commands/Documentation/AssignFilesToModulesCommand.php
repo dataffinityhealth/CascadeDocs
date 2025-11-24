@@ -7,12 +7,14 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentAIService;
+use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
 class AssignFilesToModulesCommand extends Command
 {
     use ProviderResponseTrait;
+    use ResolvesThinkingEffort;
 
     protected $signature = 'cascadedocs:assign-files-to-modules
         {--dry-run : Preview changes without applying them}
@@ -25,7 +27,7 @@ class AssignFilesToModulesCommand extends Command
         {--force : Apply changes without confirmation}
         {--skip-update : Skip running update-all-modules after assignment}';
 
-    protected $description = 'Assign unassigned files to modules using AI (creates new modules as needed)';
+    protected $description = 'Assign unassigned documentation files to modules using AI suggestions';
 
     protected ModuleAssignmentAIService $aiService;
 
@@ -332,7 +334,8 @@ class AssignFilesToModulesCommand extends Command
             $response = $this->get_response_from_provider(
                 $fullPrompt,
                 $model ?? config('cascadedocs.ai.default_model'),
-                json_mode: true
+                json_mode: true,
+                thinking_effort: $this->resolveThinkingEffort()
             );
 
             // Parse the JSON response

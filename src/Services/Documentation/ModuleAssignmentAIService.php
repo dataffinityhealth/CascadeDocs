@@ -5,11 +5,13 @@ namespace Lumiio\CascadeDocs\Services\Documentation;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
 class ModuleAssignmentAIService extends ModuleAssignmentService
 {
     use ProviderResponseTrait;
+    use ResolvesThinkingEffort;
 
     protected DocumentationParser $parser;
 
@@ -767,7 +769,8 @@ EOT;
             $response = $this->get_response_from_provider(
                 $fullPrompt,
                 $model,
-                json_mode: true
+                json_mode: true,
+                thinking_effort: $this->resolveThinkingEffort()
             );
 
             $result = json_decode($response, true);

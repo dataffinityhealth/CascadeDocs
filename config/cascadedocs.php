@@ -68,9 +68,10 @@ return [
     */
     'ai' => [
         'default_provider' => env('CASCADEDOCS_AI_PROVIDER', 'openai'),
-        'default_model' => env('CASCADEDOCS_AI_MODEL', 'o3'),
-        'filament_model' => env('CASCADEDOCS_FILAMENT_MODEL', 'claude-3-5-haiku-20241022'),
+        'default_model' => env('CASCADEDOCS_AI_MODEL', 'gpt-5-high'),
+        'filament_model' => env('CASCADEDOCS_FILAMENT_MODEL', 'gpt-5-nano'),
         'temperature' => env('CASCADEDOCS_AI_TEMPERATURE', 0.3),
+        'thinking_effort' => env('CASCADEDOCS_AI_THINKING_EFFORT', 'high'),
     ],
 
     /*

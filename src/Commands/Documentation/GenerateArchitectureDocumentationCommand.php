@@ -5,11 +5,13 @@ namespace Lumiio\CascadeDocs\Commands\Documentation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
+use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
 class GenerateArchitectureDocumentationCommand extends Command
 {
     use ProviderResponseTrait;
+    use ResolvesThinkingEffort;
 
     protected $signature = 'cascadedocs:generate-architecture-docs 
         {--model= : The AI model to use for generation}';
@@ -157,7 +159,11 @@ Format the output as a well-structured markdown document with clear sections and
 Do not use placeholders - provide specific, detailed content based on the module information provided.
 EOT;
 
-        return $this->get_response_from_provider($prompt, $model);
+        return $this->get_response_from_provider(
+            $prompt,
+            $model,
+            thinking_effort: $this->resolveThinkingEffort()
+        );
     }
 
     protected function generateArchitectureSummary(array $modules, string $model): string
@@ -207,6 +213,10 @@ Remember: If something is not clear from the module summaries, explicitly state 
 Format as markdown with clear headings.
 EOT;
 
-        return $this->get_response_from_provider($prompt, $model);
+        return $this->get_response_from_provider(
+            $prompt,
+            $model,
+            thinking_effort: $this->resolveThinkingEffort()
+        );
     }
 }

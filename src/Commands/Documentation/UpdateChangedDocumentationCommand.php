@@ -11,7 +11,9 @@ class UpdateChangedDocumentationCommand extends Command
     protected $signature = 'cascadedocs:update-changed 
         {--model= : The AI model to use for generation}
         {--dry-run : Show what would be updated without making changes}
-        {--auto-commit : Automatically commit documentation changes}';
+        {--auto-commit : Automatically commit documentation changes}
+        {--from-sha= : Git SHA to compare from (defaults to last documented SHA)}
+        {--to-sha=HEAD : Git SHA to compare to}';
 
     protected $description = 'Update documentation for all changed files, modules, and architecture';
 
@@ -23,9 +25,37 @@ class UpdateChangedDocumentationCommand extends Command
         $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
         $dryRun = $this->option('dry-run');
 
-        // Step 1: Detect changes using smart detection
+        $logPath = base_path(
+            config('cascadedocs.paths.logs', 'docs/').'documentation-update-log.json'
+        );
+
+        $fromSha = $this->resolveFromSha($logPath);
+        $toSha = $this->option('to-sha') ?? 'HEAD';
+
         $this->newLine();
-        $this->info('Step 1: Detecting files needing documentation updates...');
+        $this->info('Step 1: Detecting changes...');
+        $this->info('Comparing from: '.$fromSha);
+        $this->info('Comparing to: '.$toSha);
+
+        $diffResult = Process::run("git diff --name-only {$fromSha} {$toSha}");
+
+        if (! $diffResult->successful()) {
+            $this->error('Failed to detect changes: '.$diffResult->errorOutput());
+
+            return 1;
+        }
+
+        $changedPaths = collect(explode("\n", trim($diffResult->output())))->filter();
+
+        if ($changedPaths->isEmpty()) {
+            $this->info('No changes detected.');
+
+            return 0;
+        }
+
+        // Step 2: Detect files needing documentation updates
+        $this->newLine();
+        $this->info('Step 2: Detecting files needing documentation updates...');
 
         $diffService = new DocumentationDiffService;
         $filesToUpdate = $diffService->get_files_needing_update();
@@ -68,9 +98,9 @@ class UpdateChangedDocumentationCommand extends Command
             return 0;
         }
 
-        // Step 2: Update file documentation
+        // Step 3: Update file documentation
         $this->newLine();
-        $this->info('Step 2: Updating file documentation...');
+        $this->info('Step 3: Updating file documentation...');
 
         // Get the current commit SHA for tracking
         $currentSha = $diffService->get_current_commit_sha();
@@ -88,9 +118,9 @@ class UpdateChangedDocumentationCommand extends Command
             '--model' => $model,
         ]);
 
-        // Step 3: Update module documentation
+        // Step 4: Update module documentation
         $this->newLine();
-        $this->info('Step 3: Updating module documentation...');
+        $this->info('Step 4: Updating module documentation...');
 
         // First, assign any new files to modules
         $this->call('cascadedocs:assign-files-to-modules', [
@@ -103,9 +133,9 @@ class UpdateChangedDocumentationCommand extends Command
             '--model' => $model,
         ]);
 
-        // Step 4: Update architecture documentation if significant changes
+        // Step 5: Update architecture documentation if significant changes
         $this->newLine();
-        $this->info('Step 4: Checking if architecture update is needed...');
+        $this->info('Step 5: Checking if architecture update is needed...');
 
         // Check if any new modules were created or if many files changed
         $significantChange = $filesToUpdate->count() > 10 || $this->hasNewModules();
@@ -119,17 +149,17 @@ class UpdateChangedDocumentationCommand extends Command
             $this->info('No significant architectural changes detected.');
         }
 
-        // Step 5: Show summary
+        // Step 6: Show summary
         $this->newLine();
-        $this->info('Step 5: Documentation Update Summary');
+        $this->info('Step 6: Documentation Update Summary');
         $this->info('='.str_repeat('=', 40));
 
         $this->call('cascadedocs:module-status');
 
-        // Step 6: Optionally commit changes
+        // Step 7: Optionally commit changes
         if ($this->option('auto-commit')) {
             $this->newLine();
-            $this->info('Step 6: Committing documentation changes...');
+            $this->info('Step 7: Committing documentation changes...');
 
             $result = Process::run('git add docs/');
             if ($result->successful()) {
@@ -149,6 +179,35 @@ class UpdateChangedDocumentationCommand extends Command
         $this->info('✓ Documentation update complete!');
 
         return 0;
+    }
+
+    protected function resolveFromSha(string $logPath): string
+    {
+        if ($from = $this->option('from-sha')) {
+            return $from;
+        }
+
+        if (file_exists($logPath)) {
+            $logContents = json_decode(file_get_contents($logPath), true);
+
+            if (is_array($logContents)) {
+                if (! empty($logContents['last_update_sha'])) {
+                    return $logContents['last_update_sha'];
+                }
+
+                if (! empty($logContents['last_git_sha'])) {
+                    return $logContents['last_git_sha'];
+                }
+            }
+        }
+
+        $previousCommit = Process::run('git rev-parse HEAD~1');
+
+        if ($previousCommit->successful()) {
+            return trim($previousCommit->output());
+        }
+
+        return 'HEAD~1';
     }
 
     protected function hasNewModules(): bool

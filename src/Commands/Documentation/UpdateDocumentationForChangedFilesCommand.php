@@ -2,11 +2,12 @@
 
 namespace Lumiio\CascadeDocs\Commands\Documentation;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateDocumentationForFileJob;
 use Lumiio\CascadeDocs\Jobs\Documentation\UpdateModuleDocumentationJob;
 use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
-use Lumiio\CascadeDocs\Services\Documentation\ModuleAssignmentService;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMappingService;
 
 class UpdateDocumentationForChangedFilesCommand extends Command
@@ -32,113 +33,126 @@ class UpdateDocumentationForChangedFilesCommand extends Command
     public function handle(): int
     {
         $this->info('Starting documentation update process...');
-        $dry_run = $this->option('dry-run');
+
+        $dryRun = $this->option('dry-run');
         $model = $this->option('model') ?? config('cascadedocs.ai.default_model');
+        $logPath = config('cascadedocs.paths.tracking.documentation_update', 'docs/documentation-update-log.json');
+        $logFilename = basename($logPath);
 
-        // Use smart detection to find files needing updates
-        $this->info('Scanning for files needing documentation updates...');
-        $files_to_update = $this->diff_service->get_files_needing_update();
+        $updateLog = $this->diff_service->load_update_log();
+        $fromSha = $this->option('since') ?? $updateLog['last_update_sha'];
 
-        if ($files_to_update->isEmpty()) {
-            $this->info('✓ All documentation is up to date!');
+        if (! $fromSha) {
+            $this->info("No previous update SHA found in {$logFilename}");
+            $this->info('The log file should be initialized with a last_update_sha.');
+            $this->info('You can also use --since=<commit-sha> to specify a starting point.');
+
+            return 1;
+        }
+
+        $currentSha = $this->diff_service->get_current_commit_sha();
+
+        if ($fromSha === $currentSha) {
+            $this->info("Documentation is already up to date with commit: {$currentSha}");
 
             return 0;
         }
 
-        // Get current SHA for tracking
-        $current_sha = $this->diff_service->get_current_commit_sha();
+        $this->info("Checking for changes from {$fromSha} to {$currentSha}");
 
-        // Analyze changes
-        $all_changed = $files_to_update->pluck('path');
-        $summary = $this->diff_service->analyze_changes_for_summary($all_changed);
+        $changedFiles = $this->diff_service->get_changed_files($fromSha, $currentSha);
+        $newFiles = $this->diff_service->get_new_files($fromSha, $currentSha);
+        $deletedFiles = $this->diff_service->get_deleted_files($fromSha, $currentSha);
+
+        $documentableFiles = $changedFiles->merge($newFiles)->unique();
+
+        if ($documentableFiles->isEmpty()) {
+            $this->info('No documentable files have changed.');
+
+            return 0;
+        }
+
+        $summary = $this->diff_service->analyze_changes_for_summary($documentableFiles);
 
         $this->info("Found {$summary['total_files']} changed files:");
-        $this->table(['Type', 'Count'], collect($summary['by_type'])->map(function ($count, $type) {
-            return [$type, $count];
-        })->values());
+        $this->table(
+            ['Type', 'Count'],
+            collect($summary['by_type'])->map(fn ($count, $type) => [$type, $count])->values()
+        );
 
-        if (! empty($summary['affected_modules'])) {
-            $this->info('Affected modules: '.implode(', ', $summary['affected_modules']));
-        }
-
-        if ($dry_run) {
+        if ($dryRun) {
             $this->info('Dry run mode - no changes will be made.');
-            $this->info("\nFiles that would be updated:");
+            $this->newLine();
+            $this->info('Files that would be updated:');
 
-            foreach ($files_to_update as $fileInfo) {
-                $status = $fileInfo['documented_sha'] ? 'outdated' : 'new';
-                $this->line('  - '.$fileInfo['relative_path'].' ('.$status.')');
+            foreach ($documentableFiles as $file) {
+                $this->line(' - '.$this->diff_service->get_relative_path($file));
             }
 
             return 0;
         }
 
-        // Process each changed file
-        $this->info("\nDispatching documentation update jobs...");
+        $this->info('Dispatching documentation update jobs...');
 
-        $modules_to_update = collect();
+        $modulesToUpdate = collect();
 
-        // Track which modules need updating
-        foreach ($files_to_update as $fileInfo) {
-            $module = $this->module_service->get_module_for_file($fileInfo['path']);
+        $this->dispatchFileJobs($documentableFiles, $fromSha, $currentSha, $model, $modulesToUpdate);
 
-            if ($module && ! $modules_to_update->contains($module)) {
-                $modules_to_update->push($module);
-            }
+        if ($deletedFiles->isNotEmpty()) {
+            $this->removeDeletedFilesFromLog($deletedFiles, $updateLog);
         }
 
-        // Dispatch file update jobs
-        $bar = $this->output->createProgressBar($files_to_update->count());
-        $bar->setFormat('Dispatching file jobs: %current%/%max% [%bar%] %percent:3s%%');
-
-        foreach ($files_to_update as $fileInfo) {
-            // Pass the file's previous SHA if it exists
-            $from_sha = $fileInfo['documented_sha'] ?? $current_sha;
-
-            UpdateDocumentationForFileJob::dispatch(
-                $fileInfo['path'],
-                $from_sha,
-                $current_sha,
-                $model
-            );
-            $bar->advance();
+        if ($modulesToUpdate->isNotEmpty()) {
+            $this->dispatchModuleJobs($modulesToUpdate, $currentSha, $model);
         }
 
-        $bar->finish();
-        $this->newLine();
+        $updateLog['last_update_sha'] = $currentSha;
+        $updateLog['last_update_timestamp'] = Carbon::now()->toIso8601String();
 
-        // Dispatch module update jobs (with delay to ensure file updates complete first)
-        if ($modules_to_update->isNotEmpty()) {
-            $this->info("Dispatching module update jobs for {$modules_to_update->count()} modules...");
+        $this->diff_service->save_update_log($updateLog);
 
-            foreach ($modules_to_update as $module) {
-                if (config('queue.default') !== 'sync') {
-                    UpdateModuleDocumentationJob::dispatch($module, $current_sha, $model)->delay(now()->addMinutes(5));
-                } else {
-                    UpdateModuleDocumentationJob::dispatch($module, $current_sha, $model);
-                }
-            }
-        }
-
-        $this->info("\nDocumentation update jobs have been queued.");
-        $this->info('Check your queue worker for processing status.');
-
-        // Run module assignment analysis if we processed files
-        if ($files_to_update->isNotEmpty() && ! $dry_run) {
-            $this->newLine();
-            $this->info('Analyzing module assignments...');
-
-            $assignment_service = new ModuleAssignmentService;
-            $analysis = $assignment_service->analyze_module_assignments();
-
-            $total_unassigned = count($analysis['unassigned_files']);
-
-            if ($total_unassigned > 0) {
-                $this->warn("Found {$total_unassigned} files without module assignments.");
-                $this->info('Run php artisan cascadedocs:analyze-modules --suggest to see suggestions.');
-            }
-        }
+        $this->info('Documentation update jobs have been queued.');
+        $this->info('Updated log with SHA: '.$currentSha);
 
         return 0;
+    }
+
+    protected function dispatchFileJobs(Collection $files, string $fromSha, string $currentSha, string $model, Collection $modulesToUpdate): void
+    {
+        foreach ($files as $file) {
+            UpdateDocumentationForFileJob::dispatch(
+                $file,
+                $fromSha,
+                $currentSha,
+                $model
+            );
+
+            $module = $this->module_service->get_module_for_file($file);
+
+            if ($module && ! $modulesToUpdate->contains($module)) {
+                $modulesToUpdate->push($module);
+            }
+        }
+    }
+
+    protected function dispatchModuleJobs(Collection $modules, string $currentSha, string $model): void
+    {
+        $this->info("Dispatching module update jobs for {$modules->count()} modules...");
+
+        foreach ($modules as $module) {
+            if (config('queue.default') !== 'sync') {
+                UpdateModuleDocumentationJob::dispatch($module, $currentSha, $model)->delay(now()->addMinutes(5));
+            } else {
+                UpdateModuleDocumentationJob::dispatch($module, $currentSha, $model);
+            }
+        }
+    }
+
+    protected function removeDeletedFilesFromLog(Collection $deletedFiles, array &$updateLog): void
+    {
+        foreach ($deletedFiles as $file) {
+            $relativePath = $this->diff_service->get_relative_path($file);
+            unset($updateLog['files'][$relativePath]);
+        }
     }
 }

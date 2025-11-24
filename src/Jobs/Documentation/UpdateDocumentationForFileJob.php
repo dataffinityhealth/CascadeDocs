@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
+use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
@@ -22,6 +23,7 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
+    use ResolvesThinkingEffort;
 
     public int $tries;
 
@@ -78,7 +80,12 @@ class UpdateDocumentationForFileJob implements ShouldQueue
         );
 
         try {
-            $response = $this->get_response_from_provider($prompt, $this->model, json_mode: true);
+            $response = $this->get_response_from_provider(
+                $prompt,
+                $this->model,
+                json_mode: true,
+                thinking_effort: $this->resolveThinkingEffort()
+            );
             $updated_docs = json_decode($response, true);
 
             if (! $updated_docs || ! is_array($updated_docs)) {

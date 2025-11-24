@@ -6,11 +6,13 @@ use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
 class GenerateAiDocumentationForFilamentFilesCommand extends Command
 {
     use ProviderResponseTrait;
+    use ResolvesThinkingEffort;
 
     protected $signature = 'cascadedocs:generate-ai-documentation-for-filament-files';
 
@@ -54,7 +56,12 @@ class GenerateAiDocumentationForFilamentFilesCommand extends Command
             $prompt = $this->get_prompt($file_contents);
 
             $model = config('cascadedocs.ai.filament_model');
-            $response = $this->get_response_from_provider($prompt, $model, json_mode: false);
+            $response = $this->get_response_from_provider(
+                $prompt,
+                $model,
+                json_mode: false,
+                thinking_effort: $this->resolveThinkingEffort()
+            );
 
             // Create directory structure if it doesn't exist
             $doc_directory = dirname($doc_path);

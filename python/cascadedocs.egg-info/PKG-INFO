@@ -1,0 +1,232 @@
+Metadata-Version: 2.4
+Name: cascadedocs
+Version: 0.1.0
+Summary: AI-powered documentation generation with multi-tier support
+Author: CascadeDocs Team
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.0
+Requires-Dist: pydantic>=2.0
+Requires-Dist: pydantic-settings>=2.0
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: openai>=1.0
+Requires-Dist: aiofiles>=23.0
+Requires-Dist: rich>=13.0
+Requires-Dist: python-dotenv>=1.0
+Requires-Dist: gitpython>=3.1
+
+# CascadeDocs Python Implementation
+
+AI-powered documentation generation with multi-tier support, now available for Python projects.
+
+## Features
+
+- **Multi-tier Documentation**: Generate micro (brief), standard (balanced), or expansive (comprehensive) documentation
+- **AI-Powered Module Organization**: Automatically organize your codebase into logical modules
+- **Git Integration**: Track changes and update only modified files
+- **Language Support**: Python, JavaScript, TypeScript, PHP, Go, Java, Ruby, and more
+- **Beautiful CLI**: Rich terminal output with progress tracking
+
+## Installation
+
+```bash
+# Install from the current directory
+pip install -e .
+
+# Or install dependencies directly
+pip install -r requirements.txt
+```
+
+## Quick Start
+
+1. **Initialize configuration**:
+```bash
+cascadedocs init
+```
+
+2. **Set your OpenAI API key**:
+```bash
+export OPENAI_API_KEY='your-api-key'
+```
+
+3. **Generate documentation**:
+```bash
+# Generate all tiers
+cascadedocs generate docs
+
+# Generate specific tier
+cascadedocs generate docs --tier=micro
+
+# Generate for specific files/directories
+cascadedocs generate docs src/
+```
+
+## Commands
+
+### Documentation Generation
+
+```bash
+# Generate documentation
+cascadedocs generate docs [OPTIONS] [PATHS]...
+
+Options:
+  --tier TEXT    Documentation tier (micro/standard/expansive/all)
+  --model TEXT   AI model to use (overrides config)
+  --force        Force regeneration of existing docs
+  --dry-run      Show what would be documented
+```
+
+### Module Management
+
+```bash
+# Show module status
+cascadedocs modules status
+
+# Analyze and create modules
+cascadedocs modules analyze
+
+# Assign unassigned files
+cascadedocs modules assign --interactive
+
+# Create a new module
+cascadedocs modules create "ModuleName" --description "Module description"
+```
+
+### Update Documentation
+
+```bash
+# Update changed files
+cascadedocs update changed
+
+# Auto-commit changes
+cascadedocs update changed --auto-commit
+
+# Update since specific commit
+cascadedocs update since --from-sha=abc123
+```
+
+### Analysis
+
+```bash
+# Analyze codebase
+cascadedocs analyze files
+
+# Check documentation coverage
+cascadedocs analyze coverage --tier=micro
+
+# Generate analysis report
+cascadedocs analyze report --output=report.md
+```
+
+## Configuration
+
+Create a `cascadedocs.yaml` file:
+
+```yaml
+# Source paths to document
+source_paths:
+  - src/
+  - lib/
+
+# Output directory
+output_path: docs/source_documents/
+
+# File extensions to document
+file_extensions:
+  - .py
+  - .js
+  - .ts
+  - .jsx
+  - .tsx
+
+# Patterns to exclude
+exclude_patterns:
+  - "*test*"
+  - "*.pyc"
+
+# Directories to exclude
+exclude_dirs:
+  - venv
+  - node_modules
+  - .git
+
+# AI Configuration
+ai:
+  model: gpt-4
+  temperature: 0.3
+
+# Documentation tiers
+tiers:
+  micro:
+    max_words: 120
+  standard:
+    max_words: 500
+  expansive:
+    max_words: 2000
+
+# Module settings
+modules:
+  min_files: 3
+  confidence_threshold: 0.7
+```
+
+## Documentation Tiers
+
+### Micro (≤120 words)
+Brief one-line summaries perfect for quick reference and overview.
+
+### Standard (≤500 words)
+Balanced documentation with key concepts, ideal for most use cases.
+
+### Expansive (≤2000 words)
+Comprehensive documentation with examples and detailed explanations.
+
+## Module System
+
+CascadeDocs uses AI to organize your codebase into logical modules:
+
+1. **Automatic Analysis**: AI analyzes your code to suggest module structure
+2. **Smart Assignment**: Unassigned files are intelligently placed into existing modules
+3. **Confidence Scores**: Each assignment includes a confidence score
+4. **Interactive Review**: Optionally review and adjust assignments
+
+## Git Integration
+
+Documentation tracks file changes using Git:
+
+- SHA-based tracking ensures documentation stays in sync
+- Update only changed files for efficiency
+- Auto-commit documentation changes
+- Track documentation coverage over time
+
+## Environment Variables
+
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `CASCADEDOCS_AI_MODEL`: Override default AI model
+- `CASCADEDOCS_OUTPUT_PATH`: Override output directory
+
+## Development
+
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Format code
+black cascadedocs/
+
+# Lint code
+ruff check cascadedocs/
+```
+
+## Requirements
+
+- Python 3.9+
+- OpenAI API key
+- Git (for change tracking features)
+
+## License
+
+Same as parent CascadeDocs project.

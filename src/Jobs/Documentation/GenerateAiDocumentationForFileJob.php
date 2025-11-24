@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
 use Shawnveltman\LaravelOpenai\ProviderResponseTrait;
 
@@ -22,6 +23,7 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
     use ProviderResponseTrait;
     use Queueable;
     use SerializesModels;
+    use ResolvesThinkingEffort;
 
     public int $tries;
 
@@ -83,7 +85,12 @@ class GenerateAiDocumentationForFileJob implements ShouldQueue
                 'prompt_length' => strlen($prompt),
             ]);
 
-            $response = $this->get_response_from_provider($prompt, $this->model, json_mode: true);
+            $response = $this->get_response_from_provider(
+                $prompt,
+                $this->model,
+                json_mode: true,
+                thinking_effort: $this->resolveThinkingEffort()
+            );
             $documentation = json_decode($response, true);
 
             if (! $documentation || ! is_array($documentation)) {
