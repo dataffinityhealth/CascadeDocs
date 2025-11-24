@@ -11,7 +11,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
-use Lumiio\CascadeDocs\Services\Documentation\DocumentationDiffService;
 use Lumiio\CascadeDocs\Services\Documentation\ModuleMetadataService;
 use Lumiio\CascadeDocs\Support\ResolvesThinkingEffort;
 use Shawnveltman\LaravelOpenai\Exceptions\ClaudeRateLimitException;
@@ -298,8 +297,6 @@ class UpdateModuleDocumentationJob implements ShouldQueue
 
         return base_path("{$outputPath}{$tierDir}/{$doc_file}");
     }
-
-
 
     protected function extract_module_summary(string $content): ?string
     {
