@@ -184,6 +184,7 @@ class GenerateAiDocumentationForFilamentFilesCommandTest extends TestCase
                     expect($thinkingEffort)->toBeInstanceOf(ThinkingEffort::class);
                     expect($thinkingEffort)->toBe(ThinkingEffort::HIGH);
                     expect($maxTokens)->toBe(64000);
+
                     return true;
                 })
                 ->andReturn('## Generated Documentation')

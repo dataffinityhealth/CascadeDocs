@@ -22,8 +22,8 @@ class UpdateDocumentationForFileJob implements ShouldQueue
     use InteractsWithQueue;
     use ProviderResponseTrait;
     use Queueable;
-    use SerializesModels;
     use ResolvesThinkingEffort;
+    use SerializesModels;
 
     public int $tries;
 

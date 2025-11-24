@@ -23,8 +23,8 @@ class UpdateModuleDocumentationJob implements ShouldQueue
     use InteractsWithQueue;
     use ProviderResponseTrait;
     use Queueable;
-    use SerializesModels;
     use ResolvesThinkingEffort;
+    use SerializesModels;
 
     public int $tries = 3;
 
