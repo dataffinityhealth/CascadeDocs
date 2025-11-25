@@ -68,9 +68,10 @@ return [
     */
     'ai' => [
         'default_provider' => env('CASCADEDOCS_AI_PROVIDER', 'openai'),
-        'default_model' => env('CASCADEDOCS_AI_MODEL', 'gpt-5-high'),
-        'filament_model' => env('CASCADEDOCS_FILAMENT_MODEL', 'gpt-5-nano'),
-        'temperature' => env('CASCADEDOCS_AI_TEMPERATURE', 0.3),
+        'default_model' => env('CASCADEDOCS_AI_MODEL', 'gpt-5.1'),
+        'filament_model' => env('CASCADEDOCS_FILAMENT_MODEL', 'gpt-4o-mini'),
+        // Note: For thinking/reasoning models, temperature should be 1 (or omitted)
+        'temperature' => env('CASCADEDOCS_AI_TEMPERATURE', 1),
         'thinking_effort' => env('CASCADEDOCS_AI_THINKING_EFFORT', 'high'),
     ],
 
@@ -199,6 +200,10 @@ return [
     'modules' => [
         'auto_assign' => env('CASCADEDOCS_AUTO_ASSIGN_MODULES', true),
         'default_confidence_threshold' => 0.7,
+        // Module granularity preference: 'granular' (smaller, focused modules) or 'consolidated' (larger, broader modules)
+        'granularity' => env('CASCADEDOCS_MODULE_GRANULARITY', 'granular'),
+        // Minimum files required to form a module
+        'min_files_per_module' => env('CASCADEDOCS_MIN_FILES_PER_MODULE', 2),
     ],
 
     /*

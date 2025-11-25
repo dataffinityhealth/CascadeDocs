@@ -535,7 +535,24 @@ PHASE 2 - Create new module suggestions:
 - Group related components (e.g., Livewire components, controllers, services, models)
 - Each new module must have at least 3 related files
 
-IMPORTANT: Process ALL files in the batch - either assign them to existing modules OR group them into new module suggestions. Aim to minimize unprocessed files.
+## CRITICAL: AVOID MODULE OVERLAP
+
+**Before creating ANY new module, you MUST check for overlap with existing modules:**
+
+1. **Prefer extending existing modules** - If files could reasonably fit into an existing module (even at 70% fit), assign them there instead of creating a new module
+2. **No duplicate functionality** - Never create a new module that handles the same domain/feature as an existing one
+3. **Check for similar names** - If you're about to create "user-profiles" and "user-management" already exists, assign to "user-management" instead
+4. **Consolidate related concepts** - Auth, Login, Registration, Password Reset should ALL be in ONE authentication module, not split across multiple
+
+**Examples of BAD overlap to avoid:**
+- Creating "order-processing" when "orders" module exists
+- Creating "user-settings" when "user-management" module exists
+- Creating "api-authentication" when "authentication" module exists
+- Creating "product-catalog" when "products" module exists
+
+**When in doubt, assign to the existing module** rather than creating a new one.
+
+IMPORTANT: Process ALL files in the batch - either assign them to existing modules OR group them into new module suggestions. Aim to minimize unprocessed files AND minimize new module creation.
 
 Example path analysis:
 - File path: `app/Livewire/Products/Create.php` → Should be assigned to "products" or similar module
@@ -686,7 +703,14 @@ EOT;
      */
     protected function getInitialModuleCreationInstructions(): string
     {
-        return <<<'EOT'
+        $granularity = config('cascadedocs.modules.granularity', 'granular');
+        $minFiles = config('cascadedocs.modules.min_files_per_module', 2);
+
+        $granularityGuidance = $granularity === 'granular'
+            ? "**Prefer smaller, focused modules** - it's better to have more specific modules than fewer broad ones. A module should represent a single, well-defined concern or feature area. Create separate modules for distinct functionality even if they're related."
+            : '**Prefer larger, consolidated modules** - group related functionality together into cohesive units. A module should contain all files related to a feature or domain area, even if they serve different purposes.';
+
+        return <<<EOT
 ## INSTRUCTIONS
 
 Create a comprehensive module structure that organizes files into logical modules based on functionality. Follow these guidelines:
@@ -696,6 +720,32 @@ Create a comprehensive module structure that organizes files into logical module
 3. **Consider directory structure** as a strong hint for module organization
 4. **Create modules that make semantic sense** for the application domain
 5. **Leave files unassigned** if they don't clearly fit into any logical module
+
+## MODULE GRANULARITY
+
+{$granularityGuidance}
+
+Each module must have at least {$minFiles} files. Files that don't fit well with others should be left unassigned.
+
+## CRITICAL: AVOID OVERLAPPING MODULES
+
+**You MUST NOT create modules with overlapping responsibilities:**
+
+1. **One module per domain** - All authentication-related files (login, registration, password reset, 2FA) go in ONE "authentication" module
+2. **Consolidate related concepts** - Don't create separate modules for "order-creation", "order-processing", "order-management" - put them ALL in "orders"
+3. **Check before creating** - Before creating a new module, ask: "Does this overlap with any module I'm already creating?"
+4. **Merge similar modules** - If you find yourself creating both "users" and "user-profiles", merge them into one "user-management" module
+
+**Examples of BAD module sets (don't do this):**
+- "authentication" + "login" + "registration" (should be ONE module)
+- "products" + "product-catalog" + "inventory" (should be ONE or TWO modules max)
+- "orders" + "order-processing" + "checkout" (should be ONE module)
+
+**Examples of GOOD module separation:**
+- "authentication" (login, register, password, 2FA)
+- "user-management" (profiles, settings, roles, permissions)
+- "orders" (creation, processing, status, history)
+- "products" (catalog, inventory, pricing)
 
 Return your response as a JSON object with the following structure:
 
@@ -745,7 +795,6 @@ Guidelines:
 - Group related components together (models, controllers, Livewire components, etc.)
 - Consider both file paths AND functionality when grouping
 - Create modules that represent coherent features or subsystems
-- Each module should have at least 3 files (don't force small groups)
 
 IMPORTANT: Return ONLY valid JSON. Do not include markdown code blocks or any other text.
 

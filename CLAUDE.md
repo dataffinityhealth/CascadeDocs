@@ -4,35 +4,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CascadeDocs is a Laravel package that provides AI-powered documentation generation with multi-tier support (micro, standard, expansive). It integrates with OpenAI and Claude/Anthropic for intelligent module organization and documentation creation.
+CascadeDocs is a Laravel package (PHP 8.2+, Laravel 10/11/12) that provides AI-powered documentation generation with multi-tier support (micro, standard, expansive). It integrates with OpenAI and Claude/Anthropic for intelligent module organization and documentation creation.
 
 ## Key Commands
 
 ### Development
 ```bash
-# Install dependencies
-composer install
-
-# Run tests
+composer install              # Install dependencies
 composer test                 # Run all tests
 composer test-coverage        # Run tests with coverage report
 vendor/bin/pest --filter TestName  # Run specific test
-
-# Code quality
 composer format               # Format code using Laravel Pint
-composer analyse             # Run PHPStan static analysis
+composer analyse              # Run PHPStan static analysis
 ```
 
 ### Documentation Generation Commands
 ```bash
-# Generate documentation tiers
+# Class documentation (run first for new codebases)
+php artisan cascadedocs:generate-class-docs          # Generate all tiers
+php artisan cascadedocs:generate-class-docs --tier=standard  # Specific tier
+
+# Tier-specific generation (alternative to generate-class-docs)
 php artisan cascadedocs:generate-ai-documentation --tier=micro      # Quick summaries
 php artisan cascadedocs:generate-ai-documentation --tier=standard   # Balanced documentation
 php artisan cascadedocs:generate-ai-documentation --tier=expansive  # Comprehensive documentation
 
 # Update documentation (Git-based incremental)
-php artisan cascadedocs:update-documentation         # Update based on recent changes
 php artisan cascadedocs:update-changed               # Update all changed files, modules, and architecture
+php artisan cascadedocs:update-documentation         # Update based on recent changes
+php artisan cascadedocs:update-after-merge           # Update after git merge
 
 # Architecture documentation
 php artisan cascadedocs:generate-architecture-docs   # Generate system architecture docs
@@ -41,6 +41,10 @@ php artisan cascadedocs:generate-architecture-docs   # Generate system architect
 php artisan cascadedocs:module-status                # Show current module assignments
 php artisan cascadedocs:create-module                # Create a new module
 php artisan cascadedocs:generate-module-docs         # Full module documentation flow
+php artisan cascadedocs:assign-files-to-modules      # Assign unassigned files to modules
+php artisan cascadedocs:sync-module-assignments      # Sync module assignments from metadata
+php artisan cascadedocs:generate-module-index        # Regenerate modules/index.md
+php artisan cascadedocs:analyze-modules --suggest    # View detailed module analysis
 ```
 
 ### Module Documentation Flow
@@ -63,25 +67,16 @@ The `cascadedocs:generate-module-docs` command orchestrates the entire module do
 
 ### Core Components
 
-1. **Commands** (`src/Commands/Documentation/`)
-   - `BaseDocumentationCommand`: Abstract base for all documentation commands
-   - `GenerateDocumentationCommand`: Main documentation generation
-   - `UpdateDocumentationCommand`: Git-based incremental updates
-   - `GenerateArchitectureCommand`: Architecture documentation
-   - Module-related commands for organization
-
-2. **Services** (`src/Services/Documentation/`)
-   - `DocumentationService`: Core documentation generation logic
+1. **Commands** (`src/Commands/Documentation/`) - 15+ artisan commands for documentation generation
+2. **Services** (`src/Services/Documentation/`) - Core business logic:
+   - `DocumentationService`: Core documentation generation
    - `CascadeConsolidationService`: Hierarchical documentation consolidation
    - `FileAnalyzerService`: File content analysis with AI
-   - `FilamentFeatureService`: Filament-specific analysis
    - `GitService`: Git integration for tracking changes
    - `ModuleService`: Module organization and assignment
-
-3. **AI Integration**
-   - Uses `shawnveltman/laravel-openai` package
-   - Configurable providers: OpenAI or Claude/Anthropic
-   - Model selection through config
+3. **Jobs** (`src/Jobs/`) - Queue jobs for async processing
+4. **Support** (`src/Support/`) - Helper classes and utilities
+5. **AI Integration** - Uses `shawnveltman/laravel-openai` package (OpenAI or Claude/Anthropic)
 
 ### Documentation Tiers
 
@@ -95,6 +90,19 @@ The `cascadedocs:generate-module-docs` command orchestrates the entire module do
 - AI analyzes codebase to suggest module assignments
 - Manual overrides supported via YAML import
 
+### Generated Documentation Structure
+```
+docs/source_documents/
+├── short/           # Micro-tier documentation
+├── medium/          # Standard-tier documentation
+├── full/            # Expansive-tier documentation
+├── modules/         # Module documentation
+│   ├── content/     # Module overview documents
+│   ├── metadata/    # Module config (JSON)
+│   └── index.md     # Searchable module index
+└── architecture/    # System architecture docs
+```
+
 ## Configuration
 
 Main configuration file: `config/cascadedocs.php`
@@ -107,13 +115,10 @@ Key settings:
 - `filament_module_analysis`: Filament-specific features
 - Queue configuration for async processing
 
-## Testing Approach
+## Testing
 
-- Use Pest PHP for all tests
-- Feature tests in `tests/Feature/`
-- Unit tests in `tests/Unit/`
-- Follow existing test patterns for consistency
-- Mock AI responses in tests using the established patterns
+- Use Pest PHP for all tests (`tests/Feature/` and `tests/Unit/`)
+- Mock AI responses in tests using established patterns
 
 ## Git Workflow
 

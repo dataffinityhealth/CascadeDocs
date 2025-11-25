@@ -43,6 +43,9 @@ class GenerateArchitectureDocumentationCommand extends Command
         try {
             $architectureDoc = $this->generateArchitectureDocumentation($modules, $model);
 
+            // Validate and clean the response
+            $architectureDoc = $this->validateMarkdownResponse($architectureDoc);
+
             // Save the documentation
             $outputPath = config('cascadedocs.paths.output', 'docs/source_documents/');
             $architecturePath = base_path($outputPath.'architecture/');
@@ -58,6 +61,10 @@ class GenerateArchitectureDocumentationCommand extends Command
 
             // Also create a high-level summary
             $summaryDoc = $this->generateArchitectureSummary($modules, $model);
+
+            // Validate and clean the summary response
+            $summaryDoc = $this->validateMarkdownResponse($summaryDoc);
+
             $summaryPath = $architecturePath.config('cascadedocs.paths.architecture.summary');
             File::put($summaryPath, $summaryDoc);
 
@@ -155,7 +162,18 @@ Create a comprehensive architecture document that:
    - List key technologies and frameworks identified from modules
    - Explain their roles in the architecture
 
-Format the output as a well-structured markdown document with clear sections and subsections.
+## OUTPUT FORMAT
+
+**CRITICAL**: Your response must be a well-structured **MARKDOWN document**, NOT JSON.
+
+Format requirements:
+- Use markdown headings (# ## ###) for sections
+- Use bullet points and numbered lists where appropriate
+- Use code blocks for any technical examples
+- Use bold and italic for emphasis
+- Do NOT wrap the response in JSON or code blocks
+- Do NOT return a JSON object - return plain markdown text
+
 Do not use placeholders - provide specific, detailed content based on the module information provided.
 EOT;
 
@@ -164,6 +182,67 @@ EOT;
             $model,
             thinking_effort: $this->resolveThinkingEffort()
         );
+    }
+
+    /**
+     * Validate and clean the AI response to ensure it's markdown, not JSON.
+     */
+    protected function validateMarkdownResponse(string $response): string
+    {
+        $trimmed = trim($response);
+
+        // Check if response looks like JSON
+        if (str_starts_with($trimmed, '{') || str_starts_with($trimmed, '[')) {
+            $decoded = json_decode($trimmed, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $this->warn('AI returned JSON instead of markdown. Attempting to extract content...');
+
+                // Try to extract meaningful content from JSON
+                if (is_array($decoded)) {
+                    return $this->convertJsonToMarkdown($decoded);
+                }
+            }
+        }
+
+        // Remove markdown code block wrapper if present
+        if (str_starts_with($trimmed, '```markdown')) {
+            $trimmed = preg_replace('/^```markdown\s*/', '', $trimmed);
+            $trimmed = preg_replace('/\s*```$/', '', $trimmed);
+        } elseif (str_starts_with($trimmed, '```')) {
+            $trimmed = preg_replace('/^```\w*\s*/', '', $trimmed);
+            $trimmed = preg_replace('/\s*```$/', '', $trimmed);
+        }
+
+        return trim($trimmed);
+    }
+
+    /**
+     * Convert a JSON response to markdown format.
+     */
+    protected function convertJsonToMarkdown(array $data): string
+    {
+        $markdown = "# System Architecture\n\n";
+        $markdown .= "*Note: This content was converted from a JSON response.*\n\n";
+
+        foreach ($data as $key => $value) {
+            $title = ucwords(str_replace(['_', '-'], ' ', $key));
+            $markdown .= "## {$title}\n\n";
+
+            if (is_string($value)) {
+                $markdown .= "{$value}\n\n";
+            } elseif (is_array($value)) {
+                foreach ($value as $item) {
+                    if (is_string($item)) {
+                        $markdown .= "- {$item}\n";
+                    } elseif (is_array($item)) {
+                        $markdown .= '- '.json_encode($item)."\n";
+                    }
+                }
+                $markdown .= "\n";
+            }
+        }
+
+        return $markdown;
     }
 
     protected function generateArchitectureSummary(array $modules, string $model): string
@@ -210,7 +289,17 @@ Create a concise architecture summary document (1-2 pages) that includes:
    - Base this solely on the information provided in each module's summary
 
 Remember: If something is not clear from the module summaries, explicitly state that it's unclear rather than making assumptions.
-Format as markdown with clear headings.
+
+## OUTPUT FORMAT
+
+**CRITICAL**: Your response must be a well-structured **MARKDOWN document**, NOT JSON.
+
+Format requirements:
+- Use markdown headings (# ## ###) for sections
+- Use bullet points and numbered lists where appropriate
+- Use bold and italic for emphasis
+- Do NOT wrap the response in JSON or code blocks
+- Do NOT return a JSON object - return plain markdown text
 EOT;
 
         return $this->get_response_from_provider(
