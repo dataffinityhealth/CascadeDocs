@@ -505,6 +505,8 @@ EOT;
      */
     protected function getAssignmentInstructions(Collection $moduleSummaries): string
     {
+        $granularity = config('cascadedocs.modules.granularity', 'granular');
+
         // Extract module slugs from the existing modules
         $moduleSlugsList = '';
         if ($moduleSummaries->isNotEmpty()) {
@@ -514,6 +516,8 @@ EOT;
 
             $moduleSlugsList = "\nExisting module slugs you should use for 'assign_to_existing':\n{$slugs}\n";
         }
+
+        $overlapGuidance = $this->getIncrementalOverlapGuidanceForGranularity($granularity);
 
         return <<<EOT
 ## INSTRUCTIONS
@@ -535,24 +539,9 @@ PHASE 2 - Create new module suggestions:
 - Group related components (e.g., Livewire components, controllers, services, models)
 - Each new module must have at least 3 related files
 
-## CRITICAL: AVOID MODULE OVERLAP
+{$overlapGuidance}
 
-**Before creating ANY new module, you MUST check for overlap with existing modules:**
-
-1. **Prefer extending existing modules** - If files could reasonably fit into an existing module (even at 70% fit), assign them there instead of creating a new module
-2. **No duplicate functionality** - Never create a new module that handles the same domain/feature as an existing one
-3. **Check for similar names** - If you're about to create "user-profiles" and "user-management" already exists, assign to "user-management" instead
-4. **Consolidate related concepts** - Auth, Login, Registration, Password Reset should ALL be in ONE authentication module, not split across multiple
-
-**Examples of BAD overlap to avoid:**
-- Creating "order-processing" when "orders" module exists
-- Creating "user-settings" when "user-management" module exists
-- Creating "api-authentication" when "authentication" module exists
-- Creating "product-catalog" when "products" module exists
-
-**When in doubt, assign to the existing module** rather than creating a new one.
-
-IMPORTANT: Process ALL files in the batch - either assign them to existing modules OR group them into new module suggestions. Aim to minimize unprocessed files AND minimize new module creation.
+IMPORTANT: Process ALL files in the batch - either assign them to existing modules OR group them into new module suggestions.
 
 Example path analysis:
 - File path: `app/Livewire/Products/Create.php` → Should be assigned to "products" or similar module
@@ -710,6 +699,8 @@ EOT;
             ? "**Prefer smaller, focused modules** - it's better to have more specific modules than fewer broad ones. A module should represent a single, well-defined concern or feature area. Create separate modules for distinct functionality even if they're related."
             : '**Prefer larger, consolidated modules** - group related functionality together into cohesive units. A module should contain all files related to a feature or domain area, even if they serve different purposes.';
 
+        $overlapGuidance = $this->getOverlapGuidanceForGranularity($granularity);
+
         return <<<EOT
 ## INSTRUCTIONS
 
@@ -727,25 +718,7 @@ Create a comprehensive module structure that organizes files into logical module
 
 Each module must have at least {$minFiles} files. Files that don't fit well with others should be left unassigned.
 
-## CRITICAL: AVOID OVERLAPPING MODULES
-
-**You MUST NOT create modules with overlapping responsibilities:**
-
-1. **One module per domain** - All authentication-related files (login, registration, password reset, 2FA) go in ONE "authentication" module
-2. **Consolidate related concepts** - Don't create separate modules for "order-creation", "order-processing", "order-management" - put them ALL in "orders"
-3. **Check before creating** - Before creating a new module, ask: "Does this overlap with any module I'm already creating?"
-4. **Merge similar modules** - If you find yourself creating both "users" and "user-profiles", merge them into one "user-management" module
-
-**Examples of BAD module sets (don't do this):**
-- "authentication" + "login" + "registration" (should be ONE module)
-- "products" + "product-catalog" + "inventory" (should be ONE or TWO modules max)
-- "orders" + "order-processing" + "checkout" (should be ONE module)
-
-**Examples of GOOD module separation:**
-- "authentication" (login, register, password, 2FA)
-- "user-management" (profiles, settings, roles, permissions)
-- "orders" (creation, processing, status, history)
-- "products" (catalog, inventory, pricing)
+{$overlapGuidance}
 
 Return your response as a JSON object with the following structure:
 
@@ -880,5 +853,116 @@ EOT;
                 $fileUpdater->createModule($module);
             }
         }
+    }
+
+    /**
+     * Get overlap guidance based on granularity setting.
+     */
+    protected function getOverlapGuidanceForGranularity(string $granularity): string
+    {
+        if ($granularity === 'granular') {
+            return <<<'EOT'
+## MODULE SEPARATION GUIDANCE
+
+**Create focused, single-purpose modules** - split related but distinct concerns into separate modules:
+
+1. **Separate by concern** - Authentication (login/logout) should be separate from Password Management (reset, history, rotation), which should be separate from Two-Factor Auth (2FA setup, verification)
+2. **Separate by lifecycle** - User Registration is different from User Profile Management
+3. **Separate by domain boundary** - Even if files are related, distinct functional areas deserve their own modules
+4. **Avoid exact duplicates** - Don't create two modules for the exact same thing (e.g., don't have both "login" and "user-login")
+
+**Examples of GOOD granular module separation:**
+- "authentication" (login, logout, session management)
+- "password-security" (password rules, history, rotation, reset)
+- "two-factor-auth" (2FA setup, verification, recovery codes)
+- "user-registration" (signup flow, email verification)
+- "user-profiles" (profile viewing, editing)
+- "questionnaire-builder" (creating/editing questionnaires)
+- "questionnaire-scheduling" (scheduling, reminders)
+- "questionnaire-versioning" (version management, history)
+
+**Examples of BAD separation (too granular - avoid this):**
+- Creating separate modules for each individual file
+- Splitting a single controller from its related service
+- Separating a model from its directly-coupled policy
+
+The goal is cohesive modules around distinct functional concerns, not one mega-module per domain.
+EOT;
+        }
+
+        return <<<'EOT'
+## CRITICAL: AVOID OVERLAPPING MODULES
+
+**You MUST NOT create modules with overlapping responsibilities:**
+
+1. **One module per domain** - All authentication-related files (login, registration, password reset, 2FA) go in ONE "authentication" module
+2. **Consolidate related concepts** - Don't create separate modules for "order-creation", "order-processing", "order-management" - put them ALL in "orders"
+3. **Check before creating** - Before creating a new module, ask: "Does this overlap with any module I'm already creating?"
+4. **Merge similar modules** - If you find yourself creating both "users" and "user-profiles", merge them into one "user-management" module
+
+**Examples of BAD module sets (don't do this):**
+- "authentication" + "login" + "registration" (should be ONE module)
+- "products" + "product-catalog" + "inventory" (should be ONE or TWO modules max)
+- "orders" + "order-processing" + "checkout" (should be ONE module)
+
+**Examples of GOOD module separation:**
+- "authentication" (login, register, password, 2FA)
+- "user-management" (profiles, settings, roles, permissions)
+- "orders" (creation, processing, status, history)
+- "products" (catalog, inventory, pricing)
+EOT;
+    }
+
+    /**
+     * Get incremental assignment overlap guidance based on granularity setting.
+     * Used when assigning new files to existing module structure.
+     */
+    protected function getIncrementalOverlapGuidanceForGranularity(string $granularity): string
+    {
+        if ($granularity === 'granular') {
+            return <<<'EOT'
+## MODULE ASSIGNMENT GUIDANCE
+
+**Balance between existing modules and creating focused new ones:**
+
+1. **Assign to existing modules** when files clearly belong there (same functional concern)
+2. **Create new focused modules** when files represent a distinct concern not covered by existing modules
+3. **Don't force files into ill-fitting modules** - if a file is about "password rotation" and there's only an "authentication" module (for login/logout), consider creating a "password-security" module
+4. **Respect concern boundaries** - even if modules are in the same domain, distinct concerns deserve separate modules
+
+**When to assign to existing:**
+- File clearly matches the module's stated purpose
+- File works directly with other files in that module
+- File path suggests it belongs (e.g., `Auth/LoginController` → authentication)
+
+**When to create new module:**
+- Files represent a distinct functional concern not covered by existing modules
+- There are 3+ files that form a cohesive group around a specific feature
+- Forcing them into an existing module would make that module too broad
+
+**Avoid exact duplicates** - don't create "login-system" if "authentication" exists for the same purpose.
+EOT;
+        }
+
+        return <<<'EOT'
+## CRITICAL: AVOID MODULE OVERLAP
+
+**Before creating ANY new module, you MUST check for overlap with existing modules:**
+
+1. **Prefer extending existing modules** - If files could reasonably fit into an existing module (even at 70% fit), assign them there instead of creating a new module
+2. **No duplicate functionality** - Never create a new module that handles the same domain/feature as an existing one
+3. **Check for similar names** - If you're about to create "user-profiles" and "user-management" already exists, assign to "user-management" instead
+4. **Consolidate related concepts** - Auth, Login, Registration, Password Reset should ALL be in ONE authentication module, not split across multiple
+
+**Examples of BAD overlap to avoid:**
+- Creating "order-processing" when "orders" module exists
+- Creating "user-settings" when "user-management" module exists
+- Creating "api-authentication" when "authentication" module exists
+- Creating "product-catalog" when "products" module exists
+
+**When in doubt, assign to the existing module** rather than creating a new one.
+
+Aim to minimize unprocessed files AND minimize new module creation.
+EOT;
     }
 }
